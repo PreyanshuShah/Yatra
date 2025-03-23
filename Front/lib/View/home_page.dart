@@ -1,0 +1,479 @@
+import 'package:flutter/material.dart';
+import 'package:front/View/BookingPage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'feedback_page.dart';
+import 'add_page.dart';
+import 'settings_page.dart';
+
+class Vehicle {
+  final int id;
+  final String model;
+  final String location;
+  final String address;
+  final String phoneNumber;
+  final String price;
+  final String timePeriod;
+  final String vehicleImage;
+
+  Vehicle({
+    required this.id,
+    required this.model,
+    required this.location,
+    required this.address,
+    required this.phoneNumber,
+    required this.price,
+    required this.timePeriod,
+    required this.vehicleImage,
+  });
+
+  factory Vehicle.fromJson(Map<String, dynamic> json) {
+    return Vehicle(
+      id: json['id'],
+      model: json['model'],
+      location: json['location'],
+      address: json['address'],
+      phoneNumber: json['phone_number'],
+      price: json['price'],
+      timePeriod: json['time_period'],
+      vehicleImage: json['vehicle_image'],
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  final Function(bool) onThemeChanged;
+  final bool isDarkMode;
+
+  const HomePage(
+      {super.key, required this.onThemeChanged, required this.isDarkMode});
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late List<Vehicle> _vehicles = [];
+  String _searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
+  int _selectedIndex = 0;
+  String _username = "";
+  String? _selectedTimePeriod;
+  String? _selectedLocation;
+  double? _minPrice;
+  double? _maxPrice;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+    _fetchVehicles();
+  }
+
+  void _openFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "🔍 Filter Vehicles",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 15),
+
+              // Location Dropdown
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: "📍 Location",
+                  border: OutlineInputBorder(),
+                ),
+                items: _vehicles
+                    .map((v) => v.location)
+                    .toSet()
+                    .map(
+                        (loc) => DropdownMenuItem(value: loc, child: Text(loc)))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() => _selectedLocation = value);
+                },
+              ),
+              const SizedBox(height: 15),
+
+              // Price Fields
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                          labelText: "💰 Min Price",
+                          border: OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        setState(() => _minPrice = double.tryParse(value));
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                          labelText: "💰 Max Price",
+                          border: OutlineInputBorder()),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        setState(() => _maxPrice = double.tryParse(value));
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+
+              // 🔹 Time Period Dropdown (ADDED BACK)
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: "⏳ Select Time Period",
+                  border: OutlineInputBorder(),
+                ),
+                items: _vehicles
+                    .map((v) => v.timePeriod)
+                    .toSet()
+                    .map((period) => DropdownMenuItem(
+                        value: period, child: Text("$period days")))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() => _selectedTimePeriod = value);
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Apply Button
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {}); // Apply filters
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.cyan,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("✅ Apply Filters",
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _loadUsername() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _username = prefs.getString('username') ?? "User";
+    });
+  }
+
+  Future<void> _fetchVehicles() async {
+    try {
+      final response = await http
+          .get(Uri.parse('http://127.0.0.1:8000/auth/list-vehicles/'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> vehicleList = json.decode(response.body);
+        setState(() {
+          _vehicles =
+              vehicleList.map((data) => Vehicle.fromJson(data)).toList();
+        });
+      } else {
+        throw Exception('Failed to load vehicles');
+      }
+    } catch (error) {
+      print('Error fetching vehicles: $error');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<Vehicle> filteredVehicles = _vehicles.where((vehicle) {
+      bool matchesSearch =
+          vehicle.model.toLowerCase().contains(_searchQuery.toLowerCase());
+      bool matchesLocation =
+          _selectedLocation == null || vehicle.location == _selectedLocation;
+      bool matchesPrice =
+          (_minPrice == null || double.parse(vehicle.price) >= _minPrice!) &&
+              (_maxPrice == null || double.parse(vehicle.price) <= _maxPrice!);
+      bool matchesTimePeriod = _selectedTimePeriod == null ||
+          vehicle.timePeriod == _selectedTimePeriod;
+
+      return matchesSearch &&
+          matchesLocation &&
+          matchesPrice &&
+          matchesTimePeriod;
+    }).toList();
+
+    return Scaffold(
+      backgroundColor: Colors.cyan[50],
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.cyan, Colors.blueAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: const Text(
+          "Yatra - Rent a Vehicle",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            letterSpacing: 1.2,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 4,
+      ),
+
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ✅ Welcome Text
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Text(
+              "Welcome, $_username 👋",
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+
+          // ✅ Search Bar with Icon
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '🔍 Search for a vehicle...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.cyan),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      hintStyle: const TextStyle(color: Colors.grey),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // Modern Filter Button
+                ElevatedButton(
+                  onPressed: _openFilterBottomSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    elevation: 3,
+                    padding: const EdgeInsets.all(12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                  ),
+                  child: const Icon(Icons.filter_list, color: Colors.cyan),
+                ),
+              ],
+            ),
+          ),
+
+          // ✅ Vehicle List (Scrollable)
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    bottom: 20.0), // Prevent bottom overflow
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  shrinkWrap: true,
+                  physics:
+                      const NeverScrollableScrollPhysics(), // Prevent double scroll issue
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 15,
+                    crossAxisSpacing: 15,
+                    childAspectRatio: 0.49, // 🔥 FIXED Ratio to Avoid Overflow
+                  ),
+                  itemCount: filteredVehicles.length,
+                  itemBuilder: (context, index) {
+                    final vehicle = filteredVehicles[index];
+                    return _buildVehicleCard(vehicle);
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      // ✅ Bottom Navigation Bar
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.cyan,
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => AddPage(onVehicleAdded: (vehicle) {})),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      SettingsPage(onThemeChanged: (bool) {})),
+            );
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Vehicle Card
+  // ✅ Vehicle Card with "Book Now" Button
+  Widget _buildVehicleCard(Vehicle vehicle) {
+    return SizedBox(
+      height: 300, // 🔥 Increase Card Height
+      child: Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ✅ Vehicle Image (Larger)
+            SizedBox(
+              height: 100, // 🔥 Increase Image Size
+              child: Image.network(vehicle.vehicleImage, fit: BoxFit.cover),
+            ),
+
+            // ✅ Vehicle Details
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow(Icons.directions_car, vehicle.model),
+                    _buildDetailRow(Icons.location_on, vehicle.location),
+                    _buildDetailRow(
+                        Icons.home, vehicle.address), // ✅ Address Included
+                    _buildDetailRow(Icons.attach_money, vehicle.price),
+                    _buildDetailRow(
+                        Icons.access_time, "${vehicle.timePeriod} days"),
+
+                    const Spacer(), // 🔥 Push Buttons to Bottom
+
+                    // ✅ "Give Feedback" Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  FeedbackPage(vehicleId: vehicle.id),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan,
+                        ),
+                        child: const Text(
+                          "Give Feedback",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    // ✅ "Book Now" Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  BookingPage(vehicle: vehicle),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        child: const Text(
+                          "Book Now",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ 🔥 Fixed _buildDetailRow method
+  Widget _buildDetailRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.cyan),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+      ],
+    );
+  }
+}

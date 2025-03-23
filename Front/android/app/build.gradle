@@ -1,0 +1,46 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin" // Must be after Android and Kotlin Gradle plugins
+}
+
+android {
+    namespace = "com.example.front"
+    compileSdk = 34  // Hardcoded SDK version for stability
+    ndkVersion = "25.1.8937393"  // Replace with your NDK version if needed
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId = "com.example.front"
+        minSdk = 21  // Ensuring a stable minimum SDK version
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+        multiDexEnabled true  // Enables multidex support
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug // Use proper signing for production
+            minifyEnabled false  // Set to `true` and use ProGuard for better optimization
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.0"
+    implementation 'androidx.multidex:multidex:2.0.1'  // Required for large apps
+}
