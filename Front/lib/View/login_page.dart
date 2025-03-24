@@ -84,40 +84,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  /// 🔹 Refreshes the access token using the refresh token
-  Future<void> _refreshAccessToken() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? refreshToken = prefs.getString('refresh_token');
-
-    if (refreshToken == null) {
-      print('❌ No refresh token found. User needs to log in again.');
-      return;
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse(
-            'http://127.0.0.1:8000/auth/refresh/'), // ✅ Your refresh token API path
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refresh': refreshToken}),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        String newAccessToken = responseData['access'];
-
-        await prefs.setString(
-            'access_token', newAccessToken); // ✅ Save new token
-
-        print('✅ Access token refreshed: $newAccessToken');
-      } else {
-        print('❌ Failed to refresh access token. Please log in again.');
-      }
-    } catch (e) {
-      print('⚠️ Error refreshing token: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -54,7 +54,7 @@ class _AddPageState extends State<AddPage> {
   Future<void> _selectDateRange(BuildContext context) async {
     DateTime now = DateTime.now();
     final DateTimeRange? picked = await showDateRangePicker(
-      context: context, 
+      context: context,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)), // 1-year limit
     );
@@ -99,7 +99,7 @@ class _AddPageState extends State<AddPage> {
         'address': addressController.text.trim(),
         'price': priceController.text.trim(),
         'time_period':
-            "${DateFormat('yyyy-MM-dd').format(startDate!)} → ${DateFormat('yyyy-MM-dd').format(endDate!)}",
+            "${DateFormat('yyyy-MM-dd').format(startDate!)} to ${DateFormat('yyyy-MM-dd').format(endDate!)}",
         'phone_number': contactController.text.trim(),
         'vehicle_image': MultipartFile.fromBytes(vehicleImage!.bytes!,
             filename: vehicleImage!.name),

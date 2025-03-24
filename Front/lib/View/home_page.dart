@@ -438,7 +438,11 @@ class _HomePageState extends State<HomePage> {
                         Icons.home, vehicle.address), // ✅ Address Included
                     _buildDetailRow(Icons.attach_money, vehicle.price),
                     _buildDetailRow(
-                        Icons.access_time, "${vehicle.timePeriod} days"),
+                      Icons.access_time,
+                      vehicle.timePeriod.contains("to")
+                          ? "Duration: ${vehicle.timePeriod}"
+                          : "${vehicle.timePeriod} days",
+                    ),
 
                     const Spacer(), // 🔥 Push Buttons to Bottom
 
