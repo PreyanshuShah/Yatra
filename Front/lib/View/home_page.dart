@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: '🔍 Search for a vehicle...',
+                      hintText: ' Search for a vehicle',
                       prefixIcon: const Icon(Icons.search, color: Colors.cyan),
                       filled: true,
                       fillColor: Colors.white,
