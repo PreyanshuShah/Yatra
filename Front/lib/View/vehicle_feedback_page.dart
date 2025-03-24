@@ -7,12 +7,11 @@ class VehicleFeedbackPage extends StatefulWidget {
   const VehicleFeedbackPage({Key? key}) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
   _VehicleFeedbackPageState createState() => _VehicleFeedbackPageState();
 }
 
 class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
-  List<dynamic> _vehicles = []; // ✅ Stores user's vehicles
+  List<dynamic> _vehicles = [];
 
   @override
   void initState() {
@@ -22,11 +21,10 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
 
   Future<void> _fetchUserVehicles() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token'); // Get stored access token
+    String? token = prefs.getString('access_token');
 
     final response = await http.get(
-      Uri.parse(
-          'http://127.0.0.1:8000/auth/user-vehicles/'), // ✅ API to get user vehicles
+      Uri.parse('http://127.0.0.1:8000/auth/user-vehicles/'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -42,7 +40,7 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.cyan[50], // ✅ Light cyan background
+      backgroundColor: Colors.cyan[50],
       appBar: AppBar(
         title: const Text("My Vehicles & Feedbacks"),
         backgroundColor: Colors.cyan,
@@ -60,8 +58,7 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
   }
 
   Widget _buildVehicleCard(dynamic vehicle) {
-    List<dynamic> feedbacks =
-        vehicle['feedbacks'] ?? []; // ✅ Fetch feedbacks if available
+    List<dynamic> feedbacks = vehicle['feedbacks'] ?? [];
 
     return Card(
       margin: const EdgeInsets.all(10),
@@ -72,20 +69,44 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Vehicle Details
+            // ✅ Vehicle Details with tappable image
             Row(
               children: [
                 if (vehicle['vehicle_image'] != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      vehicle['vehicle_image'],
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          child: InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 0.5,
+                            maxScale: 4,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                vehicle['vehicle_image'],
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        vehicle['vehicle_image'],
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 const SizedBox(width: 10),
+                // ✅ Vehicle Text Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,10 +124,12 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
               ],
             ),
             const SizedBox(height: 10),
-            // ✅ Feedbacks List
+            // ✅ Feedbacks Section
             feedbacks.isEmpty
-                ? const Text("No feedbacks yet.",
-                    style: TextStyle(color: Colors.grey))
+                ? const Text(
+                    "No feedbacks yet.",
+                    style: TextStyle(color: Colors.grey),
+                  )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: feedbacks.map((feedback) {

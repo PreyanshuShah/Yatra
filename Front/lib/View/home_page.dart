@@ -387,9 +387,42 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ✅ Vehicle Image (Larger)
-            SizedBox(
-              height: 100, // 🔥 Increase Image Size
-              child: Image.network(vehicle.vehicleImage, fit: BoxFit.cover),
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => Dialog(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: InteractiveViewer(
+                      panEnabled: true,
+                      minScale: 0.5,
+                      maxScale: 4,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          vehicle.vehicleImage,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
+                ),
+                child: SizedBox(
+                  height: 100,
+                  child: Image.network(
+                    vehicle.vehicleImage,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
+                ),
+              ),
             ),
 
             // ✅ Vehicle Details

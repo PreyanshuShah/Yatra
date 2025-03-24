@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,7 +14,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String _username = 'Guest';
   String _email = 'guest@example.com';
-  String _profileImage = ''; // ✅ Profile Image URL
+  String _profileImage = '';
   bool _isLoading = true;
 
   @override
@@ -22,15 +23,10 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchUserData();
   }
 
-  /// **Fetch User Data from API**
   Future<void> _fetchUserData() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('access_token');
-
-      if (token == null || token.isEmpty) {
-        throw Exception("No access token found. Please log in again.");
-      }
 
       final response = await http.get(
         Uri.parse('http://127.0.0.1:8000/auth/user-profile/'),
@@ -41,291 +37,220 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-
+        final data = jsonDecode(response.body);
         setState(() {
           _username = data['username'] ?? 'Guest';
           _email = data['email'] ?? 'guest@example.com';
           _profileImage = data['profile_image'] ?? '';
           _isLoading = false;
         });
-
-        prefs.setString('username', _username);
-        prefs.setString('email', _email);
-        prefs.setString('profile_image', _profileImage);
       } else {
-        throw Exception("Failed to fetch user details");
+        throw Exception("Failed to load user data");
       }
     } catch (e) {
-      print("Error fetching user details: $e");
-      setState(() {
-        _isLoading = false;
-      });
+      print('Error: $e');
+      setState(() => _isLoading = false);
     }
   }
 
-  /// **Function to Change Password**
-  Future<void> _changePassword(
-      String currentPassword, String newPassword) async {
-    try {
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('access_token');
 
-      if (token == null || token.isEmpty) {
-        throw Exception("No access token found. Please log in again.");
-      }
-
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/auth/change-password/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(
-            {"current_password": currentPassword, "new_password": newPassword}),
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://127.0.0.1:8000/auth/user-profile/'),
       );
 
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath(
+        'profile_image',
+        pickedFile.path,
+      ));
+
+      var response = await request.send();
+
       if (response.statusCode == 200) {
-        _showMessage("Password changed successfully!", Colors.green);
+        _showMessage("✅ Profile photo updated!", Colors.green);
+        _fetchUserData();
       } else {
-        final data = jsonDecode(response.body);
-        _showMessage(data['error'] ?? "Failed to change password", Colors.red);
+        _showMessage("❌ Failed to upload image", Colors.red);
       }
-    } catch (e) {
-      print("Error changing password: $e");
-      _showMessage("An error occurred. Try again!", Colors.red);
     }
   }
 
-  void _showChangePasswordDialog() {
-    TextEditingController currentPasswordController = TextEditingController();
-    TextEditingController newPasswordController = TextEditingController();
-    bool obscureCurrentPassword = true;
-    bool obscureNewPassword = true;
-
+  void _showImageOptions() {
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20), // ✅ Rounded edges
-              ),
-              title: const Text(
-                "Change Password",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ✅ Current Password Field
-                    TextField(
-                      controller: currentPasswordController,
-                      obscureText: obscureCurrentPassword,
-                      decoration: InputDecoration(
-                        labelText: "Current Password",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        prefixIcon: const Icon(Icons.lock),
-                        suffixIcon: IconButton(
-                          icon: Icon(obscureCurrentPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility),
-                          onPressed: () {
-                            setState(() {
-                              obscureCurrentPassword = !obscureCurrentPassword;
-                            });
-                          },
-                        ),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Profile Options", textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image_search),
+              title: const Text("View Profile Image"),
+              onTap: () {
+                Navigator.pop(context);
+                if (_profileImage.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.network(_profileImage),
                       ),
                     ),
-                    const SizedBox(height: 15),
-
-                    // ✅ New Password Field
-                    TextField(
-                      controller: newPasswordController,
-                      obscureText: obscureNewPassword,
-                      decoration: InputDecoration(
-                        labelText: "New Password",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        prefixIcon: const Icon(Icons.vpn_key),
-                        suffixIcon: IconButton(
-                          icon: Icon(obscureNewPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility),
-                          onPressed: () {
-                            setState(() {
-                              obscureNewPassword = !obscureNewPassword;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                // ❌ Cancel Button
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child:
-                      const Text("Cancel", style: TextStyle(color: Colors.red)),
-                ),
-
-                // ✅ Change Button
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Close dialog
-                    _changePassword(
-                      currentPasswordController.text.trim(),
-                      newPasswordController.text.trim(),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: const Text("Change"),
-                ),
-              ],
-            );
-          },
-        );
-      },
+                  );
+                } else {
+                  _showMessage("No profile image available.", Colors.grey);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Select New Profile Image"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadImage();
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// **Show Message SnackBar**
-  void _showMessage(String message, Color color) {
+  void _showMessage(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
+      SnackBar(content: Text(msg), backgroundColor: color),
     );
-  }
-
-  /// **Logout Function**
-  Future<void> _logout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.cyan, // ✅ Matches the theme
-        title: const Text("Profile", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text("My Profile", style: TextStyle(color: Colors.white)),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.cyan, Colors.blueAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
         ),
       ),
       body: Stack(
         children: [
+          // Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                colors: [Colors.cyan, Colors.blueAccent],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
             ),
           ),
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white))
               : SingleChildScrollView(
+                  padding: const EdgeInsets.only(top: 140, bottom: 40),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 50),
-
-                      // ✅ Profile Picture
-                      CircleAvatar(
-                        radius: 70,
-                        backgroundColor: Colors.white,
-                        backgroundImage: _profileImage.isNotEmpty
-                            ? NetworkImage(_profileImage)
-                            : null,
-                        child: _profileImage.isEmpty
-                            ? Icon(Icons.person,
-                                size: 80, color: Colors.grey.shade800)
-                            : null,
+                      // Profile Picture + Edit
+                      GestureDetector(
+                        onTap: _showImageOptions,
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [Colors.cyan, Colors.blueAccent],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.white.withOpacity(0.3),
+                                    blurRadius: 25,
+                                    spreadRadius: 3,
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 65,
+                                backgroundColor: Colors.white,
+                                backgroundImage: _profileImage.isNotEmpty
+                                    ? NetworkImage(_profileImage)
+                                    : null,
+                                child: _profileImage.isEmpty
+                                    ? Icon(Icons.person,
+                                        size: 70, color: Colors.grey.shade700)
+                                    : null,
+                              ),
+                            ),
+                            const CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.white,
+                              child: Icon(Icons.edit, color: Colors.blueAccent),
+                            ),
+                          ],
+                        ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 35),
 
-                      // ✅ Profile Card with Shadow
-                      Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        elevation: 8,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.person,
-                                    color: Colors.cyan),
-                                title: Text(
-                                  'Username: $_username',
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                              ),
-                              const Divider(),
-                              ListTile(
-                                leading:
-                                    const Icon(Icons.email, color: Colors.cyan),
-                                title: Text(
-                                  'Email: $_email',
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                              ),
-                            ],
+                      // Info Card
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Card(
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // ✅ Change Password Button
-                      ElevatedButton.icon(
-                        onPressed: _showChangePasswordDialog,
-                        icon: const Icon(Icons.lock),
-                        label: const Text("Change Password"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 12),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // ✅ Logout Button
-                      ElevatedButton.icon(
-                        onPressed: _logout,
-                        icon: const Icon(Icons.logout),
-                        label: const Text("Logout"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 20),
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.person_outline,
+                                      color: Colors.cyan),
+                                  title: const Text("Username",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  subtitle: Text(_username),
+                                ),
+                                const Divider(),
+                                ListTile(
+                                  leading: const Icon(Icons.email_outlined,
+                                      color: Colors.cyan),
+                                  title: const Text("Email",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  subtitle: Text(_email),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],

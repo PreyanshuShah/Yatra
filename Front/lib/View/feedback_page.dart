@@ -15,7 +15,7 @@ class FeedbackPage extends StatefulWidget {
 class _FeedbackPageState extends State<FeedbackPage> {
   List<dynamic> _feedbackList = [];
   final TextEditingController _commentController = TextEditingController();
-  int _rating = 5; // Default rating
+  int _rating = 5;
 
   @override
   void initState() {
@@ -29,7 +29,6 @@ class _FeedbackPageState extends State<FeedbackPage> {
         Uri.parse(
             'http://127.0.0.1:8000/auth/feedback/list/${widget.vehicleId}/'),
       );
-
       if (response.statusCode == 200) {
         setState(() {
           _feedbackList = json.decode(response.body);
@@ -47,7 +46,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     String? token = prefs.getString('access_token');
 
     if (token == null) {
-      print('User is not logged in');
+      print('User not logged in');
       return;
     }
 
@@ -65,14 +64,14 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
     if (response.statusCode == 201) {
       _commentController.clear();
-      _rating = 5; // Reset rating
-      _fetchFeedback(); // Refresh feedback list
+      _rating = 5;
+      _fetchFeedback();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Feedback submitted successfully!')),
+        const SnackBar(content: Text('✅ Feedback submitted!')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to submit feedback')),
+        const SnackBar(content: Text('❌ Submission failed')),
       );
     }
   }
@@ -80,9 +79,26 @@ class _FeedbackPageState extends State<FeedbackPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Feedback"),
-        backgroundColor: Colors.cyan,
+      backgroundColor: Colors.grey[100],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(65),
+        child: AppBar(
+          elevation: 4,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
+          ),
+          title: const Text("Feedback"),
+          centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00BCD4), Color(0xFF2196F3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -95,92 +111,163 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     itemCount: _feedbackList.length,
                     itemBuilder: (context, index) {
                       final feedback = _feedbackList[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text(feedback['user'][0].toUpperCase()),
+                      return AnimatedOpacity(
+                        duration: const Duration(milliseconds: 500),
+                        opacity: 1.0,
+                        child: Card(
+                          elevation: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          title: Text(
-                            feedback['user'],
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(feedback['comment']),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: List.generate(5, (i) {
-                                  return Icon(
-                                    i < feedback['rating']
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    size: 18,
-                                    color: Colors.amber,
-                                  );
-                                }),
-                              ),
-                            ],
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: Colors.blueAccent.shade100,
+                                  child: Text(
+                                    feedback['user'][0].toUpperCase(),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        feedback['user'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        feedback['comment'],
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: List.generate(5, (i) {
+                                          return Icon(
+                                            i < feedback['rating']
+                                                ? Icons.star
+                                                : Icons.star_border,
+                                            size: 20,
+                                            color: Colors.amber,
+                                          );
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
                     },
                   ),
           ),
-          const Divider(height: 2, color: Colors.grey),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  spreadRadius: 3,
+                  offset: Offset(0, -3),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Leave Feedback:",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  "Leave a Review",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _commentController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: "Write your feedback...",
+                  decoration: InputDecoration(
+                    hintText: "Share your experience...",
+                    contentPadding: const EdgeInsets.all(16),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  maxLines: 3,
+                  maxLines: 4,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Text("Rating: "),
+                    const Text(
+                      "Rating:",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 12),
                     Row(
                       children: List.generate(5, (index) {
-                        return IconButton(
-                          icon: Icon(
-                            index < _rating ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                          ),
-                          onPressed: () {
+                        return GestureDetector(
+                          onTap: () {
                             setState(() {
                               _rating = index + 1;
                             });
                           },
+                          child: Icon(
+                            index < _rating
+                                ? Icons.star
+                                : Icons.star_border_outlined,
+                            color: Colors.amber,
+                            size: 28,
+                          ),
                         );
                       }),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: _submitFeedback,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyan,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Center(
-                    child: Text("Submit Feedback"),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _submitFeedback,
+                    icon: const Icon(Icons.send),
+                    label: const Text("Submit Feedback"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      textStyle: const TextStyle(fontSize: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 4,
+                    ),
                   ),
                 ),
               ],
