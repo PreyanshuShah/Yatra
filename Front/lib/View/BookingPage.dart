@@ -41,10 +41,8 @@ class _BookingPageState extends State<BookingPage> {
       appBar: AppBar(
         backgroundColor: Colors.cyan.shade800,
         elevation: 0,
-        title: const Text(
-          "Booking Details",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Booking Details",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -70,7 +68,7 @@ class _BookingPageState extends State<BookingPage> {
                 const SizedBox(height: 15),
                 _isBooking
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : _confirmBookingButton()
+                    : _confirmBookingButton(),
               ],
             ),
           ),
@@ -192,6 +190,20 @@ class _BookingPageState extends State<BookingPage> {
         ),
       );
 
+  Widget _verifyPaymentButton(String pidx) => ElevatedButton.icon(
+        onPressed: () => _verifyKhaltiPayment(pidx),
+        icon: const Icon(Icons.verified, size: 20),
+        label: const Text("Verify Payment"),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 6,
+        ),
+      );
+
   Future<void> _selectDateRange() async {
     DateTime maxAllowedEndDate = now.add(Duration(days: maxDays - 1));
     final DateTimeRange? picked = await showDateRangePicker(
@@ -204,6 +216,43 @@ class _BookingPageState extends State<BookingPage> {
         startDate = picked.start;
         endDate = picked.end;
       });
+    }
+  }
+
+  Future<void> _verifyKhaltiPayment(String pidx) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("access_token");
+
+    if (token == null) {
+      _showMessage("❌ Auth Error! Login again.", Colors.red);
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse("http://127.0.0.1:8000/auth/verify-khalti-epayment/"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "pidx": pidx,
+          "vehicle_id": widget.vehicle.id,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        _showMessage(
+            "✅ Payment Verified! Transaction ID: ${data['transaction_id']}",
+            Colors.green);
+        Navigator.pop(context);
+      } else {
+        _showMessage("❌ ${data['error'] ?? 'Verification failed'}", Colors.red);
+      }
+    } catch (e) {
+      print("🔴 Error verifying: $e");
+      _showMessage("❌ Verification failed", Colors.red);
     }
   }
 
@@ -232,8 +281,8 @@ class _BookingPageState extends State<BookingPage> {
           "Content-Type": "application/json",
         },
         body: jsonEncode({
-          "return_url": "https://example.com/payment/success/",
-          "website_url": "https://example.com/",
+          "return_url": "http://127.0.0.1:8000/payment/success/",
+          "website_url": "http://127.0.0.1:8000/",
           "amount": (double.parse(widget.vehicle.price) * 100).round(),
           "purchase_order_id":
               "order_${widget.vehicle.id}_${DateTime.now().millisecondsSinceEpoch}",
@@ -254,30 +303,26 @@ class _BookingPageState extends State<BookingPage> {
         if (await canLaunchUrl(Uri.parse(paymentUrl))) {
           await launchUrl(Uri.parse(paymentUrl),
               mode: LaunchMode.externalApplication);
-          await Future.delayed(const Duration(seconds: 3));
 
-          final verifyResponse = await http.post(
-            Uri.parse("http://127.0.0.1:8000/auth/verify-khalti-epayment/"),
-            headers: {
-              "Authorization": "Bearer $token",
-              "Content-Type": "application/json",
-            },
-            body: jsonEncode({
-              "pidx": pidx,
-              "vehicle_id": widget.vehicle.id,
-            }),
+          _showMessage(
+              "🔁 Please return and tap Verify Payment", Colors.orange);
+
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              title: const Text("Payment Pending"),
+              content: const Text(
+                  "After completing your Khalti payment, return here and tap the button below to verify."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                _verifyPaymentButton(pidx),
+              ],
+            ),
           );
-
-          final verifyData = jsonDecode(verifyResponse.body);
-          if (verifyResponse.statusCode == 200) {
-            _showMessage(
-                "✅ Booking confirmed! Payment successful.", Colors.green);
-            Navigator.pop(context);
-          } else {
-            _showMessage(
-                "❌ Payment verification failed: ${verifyData['error']}",
-                Colors.red);
-          }
         } else {
           _showMessage("❌ Could not open payment page.", Colors.red);
         }
