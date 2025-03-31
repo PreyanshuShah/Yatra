@@ -343,3 +343,74 @@ def verify_khalti_epayment(request):
     except Exception as e:
         print("❌ Exception during payment verification:", str(e))
         return Response({"error": f"Server error: {str(e)}"}, status=500)
+
+
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def khalti_payment_success(request):
+    return HttpResponse("""
+        <html>
+        <head>
+            <title>Payment Success</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background-color: #e0f7fa;
+                    font-family: 'Segoe UI', sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    text-align: center;
+                }
+                .container {
+                    background-color: white;
+                    padding: 30px 20px;
+                    border-radius: 16px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    width: 90%;
+                    max-width: 400px;
+                }
+                .emoji {
+                    font-size: 64px;
+                    margin-bottom: 15px;
+                }
+                h1 {
+                    font-size: 28px;
+                    color: #00796b;
+                    margin-bottom: 10px;
+                }
+                p {
+                    font-size: 16px;
+                    color: #555;
+                    margin-bottom: 20px;
+                }
+                a.button {
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background-color: #00796b;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    transition: background-color 0.2s ease;
+                }
+                a.button:hover {
+                    background-color: #004d40;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="emoji">✅</div>
+                <h1>Payment Successful</h1>
+                <p>Your transaction was completed successfully.</p>
+                <a class="button" href="myapp://home">Return to App</a>
+            </div>
+        </body>
+        </html>
+    """)

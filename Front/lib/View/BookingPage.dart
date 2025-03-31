@@ -281,7 +281,7 @@ class _BookingPageState extends State<BookingPage> {
           "Content-Type": "application/json",
         },
         body: jsonEncode({
-          "return_url": "http://127.0.0.1:8000/payment/success/",
+          "return_url": "http://127.0.0.1:8000/auth/payment/success/",
           "website_url": "http://127.0.0.1:8000/",
           "amount": (double.parse(widget.vehicle.price) * 100).round(),
           "purchase_order_id":
