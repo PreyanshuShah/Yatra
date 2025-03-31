@@ -162,6 +162,8 @@ def add_feedback(request, vehicle_id):
         return Response({"message": "Feedback added successfully!", "feedback": FeedbackSerializer(feedback).data}, status=201)
     except Vehicle.DoesNotExist:
         return Response({"error": "Vehicle not found."}, status=404)
+    
+
 
 @api_view(["GET"])
 def list_feedback(request, vehicle_id):
@@ -295,7 +297,7 @@ def verify_khalti_epayment(request):
         if not pidx or not vehicle_id:
             return Response({"error": "Missing pidx or vehicle_id"}, status=400)
 
-        # 🔐 Call Khalti Lookup API
+      
         url = "https://a.khalti.com/api/v2/epayment/lookup/"
         headers = {"Authorization": f"Key {settings.KHALTI_SECRET_KEY}"}
         payload = {"pidx": pidx}
@@ -327,6 +329,7 @@ def verify_khalti_epayment(request):
                 amount=data["total_amount"],
                 transaction_id=transaction_id,
                 mobile=data.get("mobile")  # Returns None if 'mobile' is missing, avoids crash
+                
 
             )
 
