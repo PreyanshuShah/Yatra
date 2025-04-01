@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'vehicle_edit_page.dart'; // ✅ Import the edit page
 
 class VehicleFeedbackPage extends StatefulWidget {
   const VehicleFeedbackPage({Key? key}) : super(key: key);
@@ -141,6 +142,29 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
                       );
                     }).toList(),
                   ),
+            const SizedBox(height: 10),
+            // ✅ Edit Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => VehicleEditPage(vehicle: vehicle),
+                      ),
+                    );
+                    if (result == true) {
+                      _fetchUserVehicles(); // Refresh after update
+                    }
+                  },
+                  icon: const Icon(Icons.edit, color: Colors.cyan),
+                  label:
+                      const Text("Edit", style: TextStyle(color: Colors.cyan)),
+                ),
+              ],
+            )
           ],
         ),
       ),
