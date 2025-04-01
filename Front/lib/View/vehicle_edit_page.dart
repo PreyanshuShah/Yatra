@@ -98,21 +98,29 @@ class _VehicleEditPageState extends State<VehicleEditPage> {
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Vehicle updated successfully!")),
+          const SnackBar(content: Text("✅ Vehicle updated successfully!")),
         );
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Update failed: ${response.statusCode}")),
+          SnackBar(content: Text("❌ Update failed: ${response.statusCode}")),
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Connection error: $e")),
+        SnackBar(content: Text("⚠️ Connection error: $e")),
       );
     }
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    );
   }
 
   @override
@@ -120,63 +128,89 @@ class _VehicleEditPageState extends State<VehicleEditPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Edit Vehicle"),
-        backgroundColor: Colors.cyan,
+        backgroundColor: Colors.teal.shade400,
+        elevation: 2,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextField(
-                  controller: _model,
-                  decoration: const InputDecoration(labelText: "Model")),
-              TextField(
-                  controller: _location,
-                  decoration: const InputDecoration(labelText: "Location")),
-              TextField(
-                  controller: _address,
-                  decoration: const InputDecoration(labelText: "Address")),
-              TextField(
-                  controller: _phone,
-                  decoration: const InputDecoration(labelText: "Phone Number")),
-              TextField(
-                controller: _price,
-                decoration: const InputDecoration(labelText: "Price"),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                  controller: _timePeriod,
-                  decoration: const InputDecoration(labelText: "Time Period")),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _pickImage(true),
-                icon: const Icon(Icons.image),
-                label: const Text("Pick Vehicle Image"),
-              ),
-              if (_vehicleImage != null)
-                Text("📸 Selected: ${path.basename(_vehicleImage!.path)}"),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: () => _pickImage(false),
-                icon: const Icon(Icons.file_copy),
-                label: const Text("Pick License Document"),
-              ),
-              if (_licenseDocument != null)
-                Text("📄 Selected: ${path.basename(_licenseDocument!.path)}"),
-              const SizedBox(height: 24),
-              _isSaving
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton.icon(
-                      icon: const Icon(Icons.save),
-                      label: const Text("Update Vehicle"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      onPressed: _updateVehicle,
+        child: Card(
+          elevation: 4,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  TextField(
+                      controller: _model,
+                      decoration: _inputDecoration("Model")),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: _location,
+                      decoration: _inputDecoration("Location")),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: _address,
+                      decoration: _inputDecoration("Address")),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: _phone,
+                      decoration: _inputDecoration("Phone Number")),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _price,
+                    decoration: _inputDecoration("Price"),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: _timePeriod,
+                      decoration: _inputDecoration("Time Period")),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () => _pickImage(true),
+                    icon: const Icon(Icons.image),
+                    label: const Text("Pick Vehicle Image"),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent),
+                  ),
+                  if (_vehicleImage != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text("📸 ${path.basename(_vehicleImage!.path)}"),
                     ),
-            ],
+                  ElevatedButton.icon(
+                    onPressed: () => _pickImage(false),
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: const Text("Pick License Document"),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange),
+                  ),
+                  if (_licenseDocument != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child:
+                          Text("📄 ${path.basename(_licenseDocument!.path)}"),
+                    ),
+                  const SizedBox(height: 24),
+                  _isSaving
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton.icon(
+                          icon: const Icon(Icons.save),
+                          label: const Text("Update Vehicle"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal.shade600,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            textStyle: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: _updateVehicle,
+                        ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
