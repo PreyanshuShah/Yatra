@@ -441,3 +441,14 @@ def update_vehicle(request, vehicle_id):
 
     vehicle.save()
     return Response({"message": "Vehicle updated successfully!"})
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_vehicle(request, vehicle_id):
+    try:
+        vehicle = Vehicle.objects.get(id=vehicle_id, user=request.user)
+        vehicle.delete()
+        return Response({"message": "Vehicle deleted successfully!"})
+    except Vehicle.DoesNotExist:
+        return Response({"error": "Vehicle not found"}, status=404)

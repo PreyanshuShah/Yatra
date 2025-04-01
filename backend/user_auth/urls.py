@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import khalti_payment_success, update_vehicle
+from .views import delete_vehicle, khalti_payment_success, update_vehicle
 
 from .views import (
     register, login, refresh_token, protected_view, password_reset_request,
@@ -49,6 +49,8 @@ urlpatterns = [
 
 
     path('update-vehicle/<int:vehicle_id>/', update_vehicle),
+    path("delete-vehicle/<int:vehicle_id>/", delete_vehicle),
+
 
 
 
