@@ -127,7 +127,7 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "preyanshushah@gmail.com"
-EMAIL_HOST_PASSWORD = "hyua gknd wshb lkdn"
+EMAIL_HOST_PASSWORD = "tqii wcot lrjf wvvm"
 
 # ✅ Allow Large File Uploads for Vehicle Images & Documents
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # ✅ Allows files up to 5MB

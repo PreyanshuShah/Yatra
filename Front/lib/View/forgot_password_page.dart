@@ -38,7 +38,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Password reset link sent to your email')),
+              content: Text('A new password has been sent to your email')),
         );
         Navigator.pop(context); // Return to login page after successful reset
       } else {
