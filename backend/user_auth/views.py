@@ -417,3 +417,27 @@ def khalti_payment_success(request):
         </body>
         </html>
     """)
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def update_vehicle(request, vehicle_id):
+    try:
+        vehicle = Vehicle.objects.get(id=vehicle_id, user=request.user)
+    except Vehicle.DoesNotExist:
+        return Response({"error": "Vehicle not found or unauthorized"}, status=404)
+
+    data = request.data
+    vehicle.model = data.get("model", vehicle.model)
+    vehicle.location = data.get("location", vehicle.location)
+    vehicle.address = data.get("address", vehicle.address)
+    vehicle.phone_number = data.get("phone_number", vehicle.phone_number)
+    vehicle.price = data.get("price", vehicle.price)
+    vehicle.time_period = data.get("time_period", vehicle.time_period)
+
+    if request.FILES.get("license_document"):
+        vehicle.license_document = request.FILES["license_document"]
+    if request.FILES.get("vehicle_image"):
+        vehicle.vehicle_image = request.FILES["vehicle_image"]
+
+    vehicle.save()
+    return Response({"message": "Vehicle updated successfully!"})
