@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import khalti_payment_success
+from .views import khalti_payment_success, update_vehicle
 
 from .views import (
     register, login, refresh_token, protected_view, password_reset_request,
@@ -46,5 +46,10 @@ urlpatterns = [
     path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("payment/success/", khalti_payment_success, name="payment-success"),
+
+
+    path('update-vehicle/<int:vehicle_id>/', update_vehicle),
+
+
 
 ]
