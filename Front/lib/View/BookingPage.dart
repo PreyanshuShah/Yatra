@@ -311,9 +311,8 @@ class _BookingPageState extends State<BookingPage> {
             context: context,
             barrierDismissible: false,
             builder: (_) => AlertDialog(
-              title: const Text("Payment Pending"),
-              content: const Text(
-                  "After completing your Khalti payment, return here and tap the button below to verify."),
+              title: const Text("Thank you for your payment!"),
+              content: const Text("we are always there to assist you."),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),

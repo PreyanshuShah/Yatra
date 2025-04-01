@@ -281,6 +281,9 @@ def user_transactions(request):
     return Response({"transactions": data})
 
 
+from django.core.mail import send_mail
+from .models import Notification, Payment, Vehicle  # Make sure Notification is imported
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def verify_khalti_epayment(request):
@@ -297,13 +300,11 @@ def verify_khalti_epayment(request):
         if not pidx or not vehicle_id:
             return Response({"error": "Missing pidx or vehicle_id"}, status=400)
 
-      
         url = "https://a.khalti.com/api/v2/epayment/lookup/"
         headers = {"Authorization": f"Key {settings.KHALTI_SECRET_KEY}"}
         payload = {"pidx": pidx}
 
         response = requests.post(url, headers=headers, json=payload)
-
         print("📦 Khalti Response Status:", response.status_code)
         print("📦 Khalti Response:", response.text)
 
@@ -323,14 +324,28 @@ def verify_khalti_epayment(request):
             except Vehicle.DoesNotExist:
                 return Response({"error": "Vehicle not found"}, status=404)
 
+            # ✅ Create Payment
             Payment.objects.create(
                 user=user,
                 vehicle=vehicle,
                 amount=data["total_amount"],
                 transaction_id=transaction_id,
-                mobile=data.get("mobile")  # Returns None if 'mobile' is missing, avoids crash
-                
+                mobile=data.get("mobile")
+            )
 
+            # ✅ Send in-app notification
+            Notification.objects.create(
+                user=user,
+                message=f"✅ Booking confirmed for vehicle: {vehicle.model}!"
+            )
+
+            # ✅ Send email
+            send_mail(
+                "✅ Booking Successful - Yatra App",
+                f"Dear {user.username},\n\nYour booking for '{vehicle.model}' has been successfully confirmed.\n\nAmount Paid: Rs. {int(data['total_amount']) / 100}\nTransaction ID: {transaction_id}\n\nThank you for using Yatra!",
+                settings.EMAIL_HOST_USER,
+                [user.email],
+                fail_silently=True,
             )
 
             return Response({
@@ -346,6 +361,7 @@ def verify_khalti_epayment(request):
     except Exception as e:
         print("❌ Exception during payment verification:", str(e))
         return Response({"error": f"Server error: {str(e)}"}, status=500)
+
 
 
 from django.http import HttpResponse
