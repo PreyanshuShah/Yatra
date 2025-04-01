@@ -1,11 +1,11 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.urls import reverse, path
-from django.utils.safestring import mark_safe
 from django.http import HttpResponseRedirect
-from django.contrib import messages
+from django.shortcuts import render, get_object_or_404
 
 from .models import Profile, Vehicle, Feedback, Notification, Payment
+from .admin_forms import NotificationForm  # Custom form for input
 from django.contrib.auth.models import User
 
 
@@ -69,18 +69,28 @@ class CustomVehicleAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def send_vehicle_notification(self, request, vehicle_id):
-        try:
-            vehicle = Vehicle.objects.get(pk=vehicle_id)
-            user = vehicle.user
-            Notification.objects.create(
-                user=user,
-                message=f"Admin sent a message regarding your vehicle: {vehicle.model}"
-            )
-            self.message_user(request, f"Notification sent to {user.username}.", level=messages.SUCCESS)
-        except Vehicle.DoesNotExist:
-            self.message_user(request, "Vehicle not found.", level=messages.ERROR)
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+        user = vehicle.user
 
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/admin/'))
+        if request.method == 'POST':
+            form = NotificationForm(request.POST)
+            if form.is_valid():
+                Notification.objects.create(
+                    user=user,
+                    message=form.cleaned_data['message']
+                )
+                self.message_user(request, f"Notification sent to {user.username}.", level=messages.SUCCESS)
+                return HttpResponseRedirect(reverse('admin:user_auth_vehicle_changelist'))
+        else:
+            form = NotificationForm(initial={
+                'message': f"Hello {user.username}, regarding your vehicle: {vehicle.model}"
+            })
+
+        return render(request, 'admin/send_vehicle_notification.html', {
+            'form': form,
+            'vehicle': vehicle,
+            'title': f"Send Notification to {user.username}"
+        })
 
 
 # ✅ Feedback Admin
