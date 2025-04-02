@@ -36,6 +36,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('A new password has been sent to your email')),
