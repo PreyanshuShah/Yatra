@@ -84,7 +84,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         decoration: BoxDecoration(
                           color: isRead ? Colors.white : Colors.cyan[50],
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
                                 color: Colors.black12,
                                 blurRadius: 5,
@@ -100,8 +100,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     : Icons.notifications_active,
                                 color: isRead ? Colors.grey : Colors.cyan,
                               ),
-                              title: const Text(
-                                "New Notification",
+                              title: Text(
+                                notification['source'] ?? 'Unknown Source',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 16),
                               ),
