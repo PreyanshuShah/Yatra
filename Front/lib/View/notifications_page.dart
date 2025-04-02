@@ -100,8 +100,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     : Icons.notifications_active,
                                 color: isRead ? Colors.grey : Colors.cyan,
                               ),
-                              title: Text(
-                                notification['source'] ?? 'Unknown Source',
+                              title: const Text(
+                                'Yatra',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 16),
                               ),
