@@ -172,7 +172,7 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
               ],
             ),
             const SizedBox(height: 10),
-            // ✅ Feedbacks Section
+            // ✅ Feedbacks Section to the pathway
             feedbacks.isEmpty
                 ? const Text(
                     "No feedbacks yet.",
