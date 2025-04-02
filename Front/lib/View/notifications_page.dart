@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart'; // ✅ For formatting date
+import 'package:intl/intl.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _NotificationsPageState createState() => _NotificationsPageState();
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
-  final Set<int> _expandedNotifications = {}; // ✅ Track expanded notifications
+  final Set<int> _expandedNotifications = {};
 
   @override
   void initState() {
@@ -23,11 +22,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _fetchNotifications();
   }
 
-  /// ✅ Fetch Notifications from API
   Future<void> _fetchNotifications() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token =
-        prefs.getString('access_token'); // ✅ Get stored access token
+    String? token = prefs.getString('access_token');
 
     final response = await http.get(
       Uri.parse('http://127.0.0.1:8000/auth/notifications/'),
@@ -41,20 +38,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _isLoading = false;
       });
     } else {
-      print('❌ Failed to load notifications');
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  /// ✅ Format Date to "yyyy-MM-dd HH:mm"
   String _formatDate(String dateTime) {
     try {
       DateTime parsedDate = DateTime.parse(dateTime);
       return DateFormat('yyyy-MM-dd HH:mm').format(parsedDate);
     } catch (e) {
-      return dateTime; // Fallback if parsing fails
+      return dateTime;
     }
   }
 
@@ -62,44 +55,59 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: const Text('Notifications',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.cyan,
+        elevation: 5,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _notifications.isEmpty
-              ? const Center(child: Text("📭 No notifications available."))
+              ? const Center(
+                  child: Text("📭 No notifications available.",
+                      style: TextStyle(fontSize: 18)))
               : RefreshIndicator(
-                  onRefresh: _fetchNotifications, // ✅ Pull-to-Refresh
+                  onRefresh: _fetchNotifications,
                   child: ListView.builder(
+                    padding: const EdgeInsets.all(8),
                     itemCount: _notifications.length,
                     itemBuilder: (context, index) {
                       final notification = _notifications[index];
                       bool isExpanded =
                           _expandedNotifications.contains(notification['id']);
+                      bool isRead = notification['is_read'];
 
-                      return Card(
-                        margin: const EdgeInsets.all(10),
-                        elevation: 4,
-                        color: notification['is_read']
-                            ? Colors.white
-                            : Colors
-                                .cyan[50], // ✅ Highlight unread notifications
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isRead ? Colors.white : Colors.cyan[50],
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 5,
+                                spreadRadius: 1),
+                          ],
+                        ),
                         child: Column(
                           children: [
                             ListTile(
-                              leading: notification['is_read']
-                                  ? const Icon(Icons.notifications_none,
-                                      color: Colors.grey)
-                                  : const Icon(Icons.notifications_active,
-                                      color: Colors.cyan),
+                              leading: Icon(
+                                isRead
+                                    ? Icons.notifications_none
+                                    : Icons.notifications_active,
+                                color: isRead ? Colors.grey : Colors.cyan,
+                              ),
                               title: const Text(
-                                "New Notification", // ✅ Only show title, not message
+                                "New Notification",
                                 style: TextStyle(
-                                    fontWeight: FontWeight.bold),
+                                    fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                               subtitle: Text(
-                                  "📅 Received: ${_formatDate(notification['created_at'])}"),
+                                  "📅 ${_formatDate(notification['created_at'])}",
+                                  style: TextStyle(color: Colors.grey[600])),
                               trailing: Icon(
                                 isExpanded
                                     ? Icons.expand_less
@@ -108,25 +116,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               ),
                               onTap: () {
                                 setState(() {
-                                  if (isExpanded) {
-                                    _expandedNotifications
-                                        .remove(notification['id']);
-                                  } else {
-                                    _expandedNotifications
-                                        .add(notification['id']);
-                                  }
+                                  isExpanded
+                                      ? _expandedNotifications
+                                          .remove(notification['id'])
+                                      : _expandedNotifications
+                                          .add(notification['id']);
                                 });
                               },
                             ),
-
-                            // ✅ Show Full Message only when Expanded
                             if (isExpanded)
                               Padding(
-                                padding: const EdgeInsets.all(10.0),
+                                padding: const EdgeInsets.all(12.0),
                                 child: Text(
-                                  notification[
-                                      'message'], // Show message only when expanded
-                                  style: const TextStyle(fontSize: 16),
+                                  notification['message'],
+                                  style: const TextStyle(
+                                      fontSize: 16, color: Colors.black87),
+                                  textAlign: TextAlign.justify,
                                 ),
                               ),
                           ],
