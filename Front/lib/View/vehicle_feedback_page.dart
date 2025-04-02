@@ -20,7 +20,7 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
     _fetchUserVehicles();
   }
 
-  //vehicle feedbacks
+  //vehicle feedbacks to be fetched from the server
 
   Future<void> _fetchUserVehicles() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
