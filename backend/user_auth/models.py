@@ -52,7 +52,7 @@ class Vehicle(models.Model):
         return f"{self.model} - {self.user.username} - {self.price}"
 
     class Meta:
-        ordering = ["-created_at"]  # ✅ Orders by latest first
+        ordering = ["-created_at"]  # ✅ Orders by latest firsts
 
 # ✅ Feedback Models
 class Feedback(models.Model):
