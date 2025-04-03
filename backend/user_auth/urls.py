@@ -47,7 +47,7 @@ urlpatterns = [
     path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("payment/success/", khalti_payment_success, name="payment-success"),
 
-
+    # ✅ Vehicle Management
     path('update-vehicle/<int:vehicle_id>/', update_vehicle),
     path("delete-vehicle/<int:vehicle_id>/", delete_vehicle),
 
