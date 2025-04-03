@@ -17,7 +17,7 @@ urlpatterns = [
     path("refresh/", refresh_token, name="refresh"),
     path("protected/", protected_view, name="protected"),
 
-    # ✅ Profile
+    # ✅ Profiles
     path("user-profile/", user_profile, name="user_profile"),
     path("change-password/", change_password, name="change_password"),
     path("password-reset-request/", password_reset_request, name="password_reset_request"),
