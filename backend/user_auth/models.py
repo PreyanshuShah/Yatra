@@ -54,7 +54,7 @@ class Vehicle(models.Model):
     class Meta:
         ordering = ["-created_at"]  # ✅ Orders by latest first
 
-# ✅ Feedback Modelss
+# ✅ Feedback Models
 class Feedback(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="feedbacks", db_index=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_feedbacks")  # ✅ Avoids conflicts
