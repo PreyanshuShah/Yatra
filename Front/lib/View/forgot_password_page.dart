@@ -6,7 +6,6 @@ class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ForgotPasswordPageState createState() => _ForgotPasswordPageState();
 }
 
@@ -36,12 +35,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('A new password has been sent to your email')),
         );
-        Navigator.pop(context); // Return to login page after successful reset
+        Navigator.pop(context); // Return to login page
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -62,11 +60,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Gradient (Cyan Theme)
+          // Background Gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF00BCD4), Color(0xFF00838F)], // Cyan Shades
+                colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -85,7 +83,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Title
                       const Text(
                         'Forgot Password',
                         style: TextStyle(
@@ -95,8 +92,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         ),
                       ),
                       const SizedBox(height: 15),
-
-                      // Email Input
                       TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -109,10 +104,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               const Icon(Icons.email, color: Color(0xFF00ACC1)),
                         ),
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Reset Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -123,8 +115,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            backgroundColor:
-                                const Color(0xFF00ACC1), // Cyan Color
+                            backgroundColor: const Color(0xFF00ACC1),
                           ),
                           child: _isLoading
                               ? const SizedBox(
@@ -143,6 +134,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                     color: Colors.white,
                                   ),
                                 ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          '← Back to Login',
+                          style: TextStyle(
+                            color: Color(0xFF00838F),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
