@@ -1,10 +1,12 @@
+// profile_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 
-import 'login_page.dart'; // ✅ Import Login Page
+import 'login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -50,7 +52,7 @@ class _ProfilePageState extends State<ProfilePage> {
         throw Exception("Failed to load user data");
       }
     } catch (e) {
-      print('Error: $e');
+      print('Error fetching user data: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -85,10 +87,111 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _changePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('access_token');
+
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/auth/change-password/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        _showMessage("✅ Password changed successfully", Colors.green);
+      } else {
+        final data = jsonDecode(response.body);
+        _showMessage(data['error'] ?? "❌ Password change failed", Colors.red);
+      }
+    } catch (e) {
+      _showMessage("❌ Error: $e", Colors.red);
+    }
+  }
+
+  void _showChangePasswordDialog() {
+    final currentPassController = TextEditingController();
+    final newPassController = TextEditingController();
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text("Change Password"),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPassController,
+                  obscureText: obscureCurrent,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureCurrent
+                          ? Icons.visibility_off
+                          : Icons.visibility),
+                      onPressed: () {
+                        setState(() => obscureCurrent = !obscureCurrent);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newPassController,
+                  obscureText: obscureNew,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          obscureNew ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () {
+                        setState(() => obscureNew = !obscureNew);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.pop(context),
+              ),
+              ElevatedButton(
+                child: const Text("Change"),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _changePassword(
+                    currentPassController.text.trim(),
+                    newPassController.text.trim(),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-
     _showMessage("Logged out successfully!", Colors.green);
 
     if (!mounted) return;
@@ -110,39 +213,41 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Profile Options", textAlign: TextAlign.center),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.image_search),
-              title: const Text("View Profile Image"),
-              onTap: () {
-                Navigator.pop(context);
-                if (_profileImage.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (_) => Dialog(
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        child: Image.network(_profileImage),
+        title: const Text("Profile Image Options", textAlign: TextAlign.center),
+        content: SizedBox(
+          height: 160,
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.image_search),
+                title: const Text("View Profile Image"),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (_profileImage.isNotEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          child: Image.network(_profileImage),
+                        ),
                       ),
-                    ),
-                  );
-                } else {
-                  _showMessage("No profile image available.", Colors.grey);
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text("Select New Profile Image"),
-              onTap: () {
-                Navigator.pop(context);
-                _pickAndUploadImage();
-              },
-            ),
-          ],
+                    );
+                  } else {
+                    _showMessage("No profile image available.", Colors.grey);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text("Select New Profile Image"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndUploadImage();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -170,14 +275,13 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Logout',
             onPressed: _logout,
-          )
+          ),
         ],
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.cyan, Colors.blueAccent],
+              colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -186,11 +290,10 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: Stack(
         children: [
-          // Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.cyan, Colors.blueAccent],
+                colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -203,7 +306,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   padding: const EdgeInsets.only(top: 140, bottom: 40),
                   child: Column(
                     children: [
-                      // Profile Picture + Edit
                       GestureDetector(
                         onTap: _showImageOptions,
                         child: Stack(
@@ -214,13 +316,16 @@ class _ProfilePageState extends State<ProfilePage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: const LinearGradient(
-                                  colors: [Colors.cyan, Colors.blueAccent],
+                                  colors: [
+                                    Color(0xFF00BCD4),
+                                    Color(0xFF00838F)
+                                  ],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white.withOpacity(0.3),
-                                    blurRadius: 25,
-                                    spreadRadius: 3,
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
                                   ),
                                 ],
                               ),
@@ -239,46 +344,70 @@ class _ProfilePageState extends State<ProfilePage> {
                             const CircleAvatar(
                               radius: 20,
                               backgroundColor: Colors.white,
-                              child: Icon(Icons.edit, color: Colors.blueAccent),
+                              child: Icon(Icons.edit, color: Color(0xFF00838F)),
                             ),
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 35),
-
-                      // Info Card
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 20),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.person_outline,
+                                    color: Colors.white),
+                                title: const Text("Username",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white)),
+                                subtitle: Text(_username,
+                                    style:
+                                        const TextStyle(color: Colors.white70)),
+                              ),
+                              const Divider(color: Colors.white24),
+                              ListTile(
+                                leading: const Icon(Icons.email_outlined,
+                                    color: Colors.white),
+                                title: const Text("Email",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white)),
+                                subtitle: Text(_email,
+                                    style:
+                                        const TextStyle(color: Colors.white70)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 25),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Card(
-                          elevation: 8,
+                          color: Colors.white.withOpacity(0.1),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 20),
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  leading: const Icon(Icons.person_outline,
-                                      color: Colors.cyan),
-                                  title: const Text("Username",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  subtitle: Text(_username),
-                                ),
-                                const Divider(),
-                                ListTile(
-                                  leading: const Icon(Icons.email_outlined,
-                                      color: Colors.cyan),
-                                  title: const Text("Email",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  subtitle: Text(_email),
-                                ),
-                              ],
+                              borderRadius: BorderRadius.circular(16)),
+                          child: ListTile(
+                            leading: const Icon(Icons.lock_reset,
+                                color: Colors.white),
+                            title: const Text(
+                              "Change Password",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
                             ),
+                            trailing: const Icon(Icons.arrow_forward_ios,
+                                color: Colors.white),
+                            onTap: _showChangePasswordDialog,
                           ),
                         ),
                       ),
