@@ -3,9 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'home_page.dart'; // Navigate to HomePage after login
-import 'forgot_password_page.dart'; // Navigate to ForgotPasswordPage
-import 'signup_page.dart'; // Navigate to SignupPage if user doesn't have an account
+import 'home_page.dart';
+import 'forgot_password_page.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   final Function(bool) onThemeChanged;
@@ -71,7 +71,9 @@ class _LoginPageState extends State<LoginPage> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(responseData['detail'] ?? '❌ Login failed')),
+            SnackBar(
+                content: Text(
+                    responseData['detail'] ?? 'Invalid username or password')),
           );
         }
       } catch (e) {
@@ -90,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF00BCD4), Color(0xFF00838F)], // ✅ Cyan Gradient
+            colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -111,7 +113,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 0),
 
-                  // ✅ "Welcome Back" Text
                   const Text(
                     "Welcome Back!",
                     style: TextStyle(
@@ -127,12 +128,10 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 30),
 
-                  // ✅ Username Field
                   _buildTextField(
                       'Username', _usernameController, Icons.person),
                   const SizedBox(height: 15),
 
-                  // ✅ Password Field
                   _buildTextField('Password', _passwordController, Icons.lock,
                       obscureText: true),
                   const SizedBox(height: 20),
