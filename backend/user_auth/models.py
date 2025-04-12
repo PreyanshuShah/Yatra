@@ -47,6 +47,8 @@ class Vehicle(models.Model):
     license_document = models.FileField(upload_to="documents/", blank=True, null=True)  # ✅ Optional field
     vehicle_image = models.ImageField(upload_to="vehicles/")
     created_at = models.DateTimeField(auto_now_add=True)
+    is_available = models.BooleanField(default=True)
+
 
     def __str__(self):
         return f"{self.model} - {self.user.username} - {self.price}"
