@@ -34,7 +34,7 @@ def get_tokens_for_user(user):
 def register(request):
     username = request.data.get("username")
     password = request.data.get("password")
-    email = request.data.get("email", "")
+    email = request.data.get("email")
 
     if not username or not password:
         return Response({"error": "Username and password are required"}, status=400)
@@ -264,6 +264,8 @@ def change_password(request):
 
 
 
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def user_transactions(request):
@@ -466,5 +468,27 @@ def delete_vehicle(request, vehicle_id):
         vehicle = Vehicle.objects.get(id=vehicle_id, user=request.user)
         vehicle.delete()
         return Response({"message": "Vehicle deleted successfully!"})
+    except Vehicle.DoesNotExist:
+        return Response({"error": "Vehicle not found"}, status=404)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Vehicle
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def mark_vehicle_unavailable(request):
+    vehicle_id = request.data.get("vehicle_id")
+
+    if not vehicle_id:
+        return Response({"error": "Vehicle ID not provided"}, status=400)
+
+    try:
+        vehicle = Vehicle.objects.get(id=vehicle_id)
+        vehicle.is_available = False
+        vehicle.save()
+        return Response({"message": "Vehicle marked as unavailable"}, status=200)
     except Vehicle.DoesNotExist:
         return Response({"error": "Vehicle not found"}, status=404)
