@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import delete_vehicle, khalti_payment_success, update_vehicle
+from .views import delete_vehicle, khalti_payment_success, mark_vehicle_unavailable, update_vehicle
 
 from .views import (
     register, login, refresh_token, protected_view, password_reset_request,
@@ -27,6 +27,9 @@ urlpatterns = [
     path("list-vehicles/", VehicleListView.as_view(), name="list_vehicles"),
     path("vehicle/<int:pk>/", VehicleDetailView.as_view(), name="vehicle_detail"),
     path("user-vehicles/", user_vehicles, name="user_vehicles"),
+     path('update-vehicle/<int:vehicle_id>/', update_vehicle),
+    path("delete-vehicle/<int:vehicle_id>/", delete_vehicle),
+    path("mark-vehicle-unavailable/", mark_vehicle_unavailable, name="mark_vehicle_unavailable"),
 
     # ✅ Feedback
     path("feedback/add/<int:vehicle_id>/", add_feedback, name="add_feedback"),
@@ -41,17 +44,13 @@ urlpatterns = [
     # ✅ Payments
    
     path("user-transactions/", user_transactions, name="user_transactions"),
-
-
     path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("payment/success/", khalti_payment_success, name="payment-success"),
-
-    # ✅ Vehicle Management
-    path('update-vehicle/<int:vehicle_id>/', update_vehicle),
-    path("delete-vehicle/<int:vehicle_id>/", delete_vehicle),
-
-
-
-
 ]
+   
+
+
+
+
+
