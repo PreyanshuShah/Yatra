@@ -246,6 +246,9 @@ class _BookingPageState extends State<BookingPage> {
         _showMessage(
             "✅ Payment Verified! Transaction ID: ${data['transaction_id']}",
             Colors.green);
+
+        await _markVehicleUnavailable(); // ✅ Mark vehicle unavailable
+
         Navigator.pop(context);
       } else {
         _showMessage("❌ ${data['error'] ?? 'Verification failed'}", Colors.red);
@@ -333,6 +336,32 @@ class _BookingPageState extends State<BookingPage> {
       _showMessage("❌ Error occurred during payment", Colors.red);
     } finally {
       setState(() => _isBooking = false);
+    }
+  }
+
+  Future<void> _markVehicleUnavailable() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("access_token");
+
+    if (token == null) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse("http://127.0.0.1:8000/mark-vehicle-unavailable/"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({"vehicle_id": widget.vehicle.id}),
+      );
+
+      if (response.statusCode == 200) {
+        print("✅ Vehicle marked unavailable");
+      } else {
+        print("⚠️ Failed to mark unavailable: ${response.body}");
+      }
+    } catch (e) {
+      print("❌ Error marking vehicle unavailable: $e");
     }
   }
 
