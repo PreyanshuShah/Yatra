@@ -138,7 +138,6 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 15),
 
-              // 🔹 Time Period Dropdown (ADDED BACK)
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: "⏳ Select Time Period",
@@ -310,22 +309,19 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // ✅ Vehicle List (Scrollable)
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.only(
-                    bottom: 20.0), // Prevent bottom overflow
+                padding: const EdgeInsets.only(bottom: 20.0),
                 child: GridView.builder(
                   padding: const EdgeInsets.all(12),
                   shrinkWrap: true,
-                  physics:
-                      const NeverScrollableScrollPhysics(), // Prevent double scroll issue
+                  physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 15,
                     crossAxisSpacing: 15,
-                    childAspectRatio: 0.49, // 🔥 FIXED Ratio to Avoid Overflow
+                    childAspectRatio: 0.49,
                   ),
                   itemCount: filteredVehicles.length,
                   itemBuilder: (context, index) {

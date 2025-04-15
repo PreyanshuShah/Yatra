@@ -29,7 +29,11 @@ def get_tokens_for_user(user):
         "access": str(refresh.access_token),
     }
 
-# Register API
+from django.contrib.auth.models import User
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
 @api_view(["POST"])
 def register(request):
     username = request.data.get("username")
@@ -46,7 +50,10 @@ def register(request):
         return Response({"error": "Email is already in use"}, status=400)
 
     user = User.objects.create_user(username=username, password=password, email=email)
-    return Response({"message": "User registered successfully", "user": username})
+    
+    # Return a success message with status 201
+    return Response({"message": "User registered successfully", "user": username}, status=status.HTTP_201_CREATED)
+
 
 # Login API
 @api_view(["POST"])
@@ -125,7 +132,7 @@ def add_vehicle(request):
 
 @api_view(["GET"])
 def list_vehicles(request):
-    vehicles = Vehicle.objects.all()
+    vehicles = Vehicle.objects.filter(is_available=True)  # ✅ Only show available vehicles
     serializer = VehicleSerializer(vehicles, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -137,14 +144,20 @@ def user_vehicles(request):
     return Response(serializer.data)
 
 class VehicleListView(generics.ListAPIView):
-    queryset = Vehicle.objects.all().prefetch_related('feedbacks')
     serializer_class = VehicleSerializer
     permission_classes = [permissions.AllowAny]
 
+    def get_queryset(self):
+        return Vehicle.objects.filter(is_available=True).prefetch_related('feedbacks')
+
+
 class VehicleDetailView(generics.RetrieveAPIView):
-    queryset = Vehicle.objects.all().prefetch_related('feedbacks')
     serializer_class = VehicleSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return Vehicle.objects.filter(is_available=True).prefetch_related('feedbacks')
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -338,7 +351,7 @@ def verify_khalti_epayment(request):
             # ✅ Send in-app notification
             Notification.objects.create(
                 user=user,
-                message=f"✅ Booking confirmed for vehicle: {vehicle.model}!"
+                message=f"Booking confirmed for vehicle: {vehicle.model}!"
             )
 
             # ✅ Send email
@@ -492,3 +505,5 @@ def mark_vehicle_unavailable(request):
         return Response({"message": "Vehicle marked as unavailable"}, status=200)
     except Vehicle.DoesNotExist:
         return Response({"error": "Vehicle not found"}, status=404)
+
+

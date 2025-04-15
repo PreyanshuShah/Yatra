@@ -19,6 +19,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   provider: ^6.0.5
   shared_preferences: ^2.5.1
+  flutter_local_notifications: ^15.1.0
+
 
   # ✅ Media & File Handling
   image_picker: ^0.8.7+3
@@ -34,6 +36,10 @@ dependencies:
   # ✅ Auth
   jwt_decoder: ^2.0.1
   flutter_plugin_android_lifecycle: ^2.0.18
+
+  
+  
+
 
 dev_dependencies:
   flutter_test:

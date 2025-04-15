@@ -347,7 +347,7 @@ class _BookingPageState extends State<BookingPage> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://127.0.0.1:8000/mark-vehicle-unavailable/"),
+        Uri.parse("http://127.0.0.1:8000/auth/mark-vehicle-unavailable/"),
         headers: {
           "Authorization": "Bearer $token",
           "Content-Type": "application/json",
@@ -356,7 +356,6 @@ class _BookingPageState extends State<BookingPage> {
       );
 
       if (response.statusCode == 200) {
-        print("✅ Vehicle marked unavailable");
       } else {
         print("⚠️ Failed to mark unavailable: ${response.body}");
       }

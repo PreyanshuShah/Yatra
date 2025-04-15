@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -15,11 +16,58 @@ class _NotificationsPageState extends State<NotificationsPage> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
   final Set<int> _expandedNotifications = {};
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
     _fetchNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
+      requestSoundPermission: true,
+      requestBadgePermission: true,
+      requestAlertPermission: true,
+    );
+
+    const InitializationSettings initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+    // Optional for iOS: request permissions
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  Future<void> _showPopup(String title, String body) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'yatra_channel',
+      'Yatra Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(0, title, body, platformDetails);
   }
 
   Future<void> _fetchNotifications() async {
@@ -33,12 +81,33 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     if (response.statusCode == 200) {
       List<dynamic> notifications = json.decode(response.body);
+
+      for (var notif in notifications) {
+        if (!notif['is_read']) {
+          await _showPopup("📢 New Notification", notif['message']);
+          break;
+        }
+      }
+
       setState(() {
         _notifications = notifications;
         _isLoading = false;
       });
     } else {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _markAsRead(int id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('access_token');
+    final response = await http.post(
+      Uri.parse('http://127.0.0.1:8000/auth/notifications/read/$id/'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      debugPrint("❌ Failed to mark notification as read");
     }
   }
 
@@ -84,7 +153,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         decoration: BoxDecoration(
                           color: isRead ? Colors.white : Colors.cyan[50],
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
+                          boxShadow: const [
                             BoxShadow(
                                 color: Colors.black12,
                                 blurRadius: 5,
@@ -114,7 +183,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     : Icons.expand_more,
                                 color: Colors.grey,
                               ),
-                              onTap: () {
+                              onTap: () async {
                                 setState(() {
                                   isExpanded
                                       ? _expandedNotifications
@@ -122,6 +191,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       : _expandedNotifications
                                           .add(notification['id']);
                                 });
+
+                                if (!isRead) {
+                                  await _markAsRead(notification['id']);
+                                  setState(() {
+                                    notification['is_read'] = true;
+                                  });
+                                }
                               },
                             ),
                             if (isExpanded)
