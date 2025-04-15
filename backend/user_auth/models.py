@@ -23,7 +23,7 @@ from django.contrib.auth.models import User
 class Payment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     vehicle = models.ForeignKey("Vehicle", on_delete=models.CASCADE)
-    amount = models.IntegerField()  # Amount in Paisa (1 NPR = 100 paisa)
+    amount = models.IntegerField()  
     transaction_id = models.CharField(max_length=50, unique=True)
     # models.py
     mobile = models.CharField(max_length=15, null=True, blank=True)
@@ -59,16 +59,16 @@ class Vehicle(models.Model):
 # ✅ Feedback Models
 class Feedback(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name="feedbacks", db_index=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_feedbacks")  # ✅ Avoids conflicts
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_feedbacks") 
     comment = models.TextField()
-    rating = models.IntegerField(default=5, validators=[MinValueValidator(1), MaxValueValidator(5)])  # ✅ Restricts rating to 1-5
+    rating = models.IntegerField(default=5, validators=[MinValueValidator(1), MaxValueValidator(5)])  
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.vehicle.model} - {self.rating}⭐"
 
     class Meta:
-        ordering = ["-created_at"]  # ✅ Orders feedback by latest first
+        ordering = ["-created_at"]  
  
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")

@@ -21,7 +21,7 @@ class CustomVehicleAdmin(admin.ModelAdmin):
     list_display = (
         'model', 'user', 'formatted_price', 'location', 'address',
         'phone_number', 'time_period', 'created_at', 'view_image',
-        'view_license', 'send_notification_button', 'delete_button'
+        'view_license', 'send_notification_button', 'is_available'  ,'delete_button'
     )
     search_fields = ('model', 'user__username', 'location', 'address', 'phone_number', 'price')
     list_filter = ('location', 'created_at', 'price')

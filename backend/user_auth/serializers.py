@@ -17,7 +17,7 @@ class VehicleSerializer(serializers.ModelSerializer):
         model = Vehicle
         fields = [
             'id', 'model', 'location', 'address', 'phone_number', 
-            'price', 'time_period', 'vehicle_image', 'license_document', 'feedbacks'
+            'price', 'time_period', 'vehicle_image',  'is_available'  ,'license_document', 'feedbacks'
         ]
 
     def to_representation(self, instance):
