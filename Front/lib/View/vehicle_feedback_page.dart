@@ -20,8 +20,6 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
     _fetchUserVehicles();
   }
 
-  //vehicle feedbacks to be fetched from the server
-
   Future<void> _fetchUserVehicles() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('access_token');
@@ -117,7 +115,6 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Vehicle Details with tappable image
             Row(
               children: [
                 if (vehicle['vehicle_image'] != null)
@@ -154,7 +151,6 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
                     ),
                   ),
                 const SizedBox(width: 10),
-                // ✅ Vehicle Text Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,14 +161,32 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text("Location: ${vehicle['location']}"),
-                      Text("Price: \$${vehicle['price']}"),
+                      Text("Price: Rs. ${vehicle['price']}"),
+                      Text(
+                        vehicle['is_approved'] == true
+                            ? "Status: ✅ Approved"
+                            : "Status: ⏳ Pending Approval",
+                        style: TextStyle(
+                          color: vehicle['is_approved'] == true
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (vehicle['is_available'] == false)
+                        const Text(
+                          "Status: ✅ Booked",
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            // ✅ Feedbacks Section to the pathway
             feedbacks.isEmpty
                 ? const Text(
                     "No feedbacks yet.",
@@ -190,7 +204,6 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
                     }).toList(),
                   ),
             const SizedBox(height: 10),
-            // ✅ Edit & Delete Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -203,7 +216,7 @@ class _VehicleFeedbackPageState extends State<VehicleFeedbackPage> {
                       ),
                     );
                     if (result == true) {
-                      _fetchUserVehicles(); // Refresh after update
+                      _fetchUserVehicles();
                     }
                   },
                   icon: const Icon(Icons.edit, color: Colors.cyan),

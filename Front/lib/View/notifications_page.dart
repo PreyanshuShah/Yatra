@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:front/helpers/notification_helper.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -16,58 +16,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
   final Set<int> _expandedNotifications = {};
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
-    _initializeNotifications();
+    NotificationHelper.initialize();
     _fetchNotifications();
-  }
-
-  Future<void> _initializeNotifications() async {
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
-    );
-
-    const InitializationSettings initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await flutterLocalNotificationsPlugin.initialize(initSettings);
-
-    // Optional for iOS: request permissions
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
-  }
-
-  Future<void> _showPopup(String title, String body) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'yatra_channel',
-      'Yatra Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
-
-    const NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await flutterLocalNotificationsPlugin.show(0, title, body, platformDetails);
   }
 
   Future<void> _fetchNotifications() async {
@@ -84,7 +38,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
       for (var notif in notifications) {
         if (!notif['is_read']) {
-          await _showPopup("📢 New Notification", notif['message']);
+          await NotificationHelper.showNotification(
+            "📢 New Notification",
+            notif['message'],
+          );
           break;
         }
       }

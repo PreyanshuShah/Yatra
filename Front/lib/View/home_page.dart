@@ -3,6 +3,7 @@ import 'package:front/View/BookingPage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'feedback_page.dart';
 import 'add_page.dart';
 import 'settings_page.dart';
@@ -69,6 +70,9 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUsername();
     _fetchVehicles();
+    Timer.periodic(Duration(seconds: 30), (timer) {
+      _fetchVehicles();
+    });
   }
 
   void _openFilterBottomSheet() {
@@ -84,16 +88,12 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                "🔍 Filter Vehicles",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+              const Text("\u{1F50D} Filter Vehicles",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 15),
-
-              // Location Dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
-                  labelText: "📍 Location",
+                  labelText: "\u{1F4CD} Location",
                   border: OutlineInputBorder(),
                 ),
                 items: _vehicles
@@ -107,66 +107,56 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               const SizedBox(height: 15),
-
-              // Price Fields
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       decoration: const InputDecoration(
-                          labelText: "💰 Min Price",
+                          labelText: "\u{1F4B0} Min Price",
                           border: OutlineInputBorder()),
                       keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        setState(() => _minPrice = double.tryParse(value));
-                      },
+                      onChanged: (value) =>
+                          setState(() => _minPrice = double.tryParse(value)),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       decoration: const InputDecoration(
-                          labelText: "💰 Max Price",
+                          labelText: "\u{1F4B0} Max Price",
                           border: OutlineInputBorder()),
                       keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        setState(() => _maxPrice = double.tryParse(value));
-                      },
+                      onChanged: (value) =>
+                          setState(() => _maxPrice = double.tryParse(value)),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 15),
-
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
-                  labelText: "⏳ Select Time Period",
-                  border: OutlineInputBorder(),
-                ),
+                    labelText: "\u{23F3} Select Time Period",
+                    border: OutlineInputBorder()),
                 items: _vehicles
                     .map((v) => v.timePeriod)
                     .toSet()
                     .map((period) => DropdownMenuItem(
                         value: period, child: Text("$period days")))
                     .toList(),
-                onChanged: (value) {
-                  setState(() => _selectedTimePeriod = value);
-                },
+                onChanged: (value) =>
+                    setState(() => _selectedTimePeriod = value),
               ),
               const SizedBox(height: 20),
-
-              // Apply Button
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  setState(() {}); // Apply filters
+                  setState(() {});
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.cyan,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text("✅ Apply Filters",
+                    backgroundColor: Colors.cyan,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
+                child: const Text("\u{2705} Apply Filters",
                     style: TextStyle(color: Colors.white)),
               ),
             ],
@@ -178,16 +168,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadUsername() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _username = prefs.getString('username') ?? "User";
-    });
+    setState(() => _username = prefs.getString('username') ?? "User");
   }
 
   Future<void> _fetchVehicles() async {
     try {
       final response = await http
           .get(Uri.parse('http://127.0.0.1:8000/auth/list-vehicles/'));
-
       if (response.statusCode == 200) {
         final List<dynamic> vehicleList = json.decode(response.body);
         setState(() {
@@ -214,7 +201,6 @@ class _HomePageState extends State<HomePage> {
               (_maxPrice == null || double.parse(vehicle.price) <= _maxPrice!);
       bool matchesTimePeriod = _selectedTimePeriod == null ||
           vehicle.timePeriod == _selectedTimePeriod;
-
       return matchesSearch &&
           matchesLocation &&
           matchesPrice &&
@@ -225,139 +211,110 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.cyan[50],
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.cyan, Colors.blueAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: const Text(
-          "Yatra - Rent a Vehicle",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            letterSpacing: 1.2,
-          ),
-        ),
+        title: const Text("Yatra - Rent a Vehicle",
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                letterSpacing: 1.2)),
+        backgroundColor: Colors.cyan,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 4,
       ),
-
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ Welcome Text
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(
-              "Welcome, $_username 👋",
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-
-          // ✅ Search Bar with Icon
+              padding: const EdgeInsets.all(12.0),
+              child: Text("Welcome, $_username 👋",
+                  style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: ' Search for a vehicle',
-                      prefixIcon: const Icon(Icons.search, color: Colors.cyan),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: ' Search for a vehicle',
+                    prefixIcon: const Icon(Icons.search, color: Colors.cyan),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                      hintStyle: const TextStyle(color: Colors.grey),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                    },
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
+                  onChanged: (value) => setState(() => _searchQuery = value),
                 ),
-                const SizedBox(width: 10),
-
-                // Modern Filter Button
-                ElevatedButton(
-                  onPressed: _openFilterBottomSheet,
-                  style: ElevatedButton.styleFrom(
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: _openFilterBottomSheet,
+                style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     elevation: 3,
                     padding: const EdgeInsets.all(12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                  child: const Icon(Icons.filter_list, color: Colors.cyan),
-                ),
-              ],
-            ),
+                        borderRadius: BorderRadius.circular(50))),
+                child: const Icon(Icons.filter_list, color: Colors.cyan),
+              ),
+            ]),
           ),
-
           Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 15,
-                    crossAxisSpacing: 15,
-                    childAspectRatio: 0.49,
+            child: RefreshIndicator(
+              onRefresh: _fetchVehicles,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 15,
+                      crossAxisSpacing: 15,
+                      childAspectRatio: 0.49,
+                    ),
+                    itemCount: filteredVehicles.length,
+                    itemBuilder: (context, index) {
+                      final vehicle = filteredVehicles[index];
+                      return _buildVehicleCard(vehicle);
+                    },
                   ),
-                  itemCount: filteredVehicles.length,
-                  itemBuilder: (context, index) {
-                    final vehicle = filteredVehicles[index];
-                    return _buildVehicleCard(vehicle);
-                  },
                 ),
               ),
             ),
           ),
         ],
       ),
-
-      // ✅ Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         selectedItemColor: Colors.cyan,
         unselectedItemColor: Colors.grey,
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+        onTap: (index) async {
+          setState(() => _selectedIndex = index);
           if (index == 1) {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => AddPage(onVehicleAdded: (vehicle) {})),
+                builder: (context) => AddPage(
+                  onVehicleAdded: (vehicle) => _fetchVehicles(),
+                ),
+              ),
             );
+            if (result == true) _fetchVehicles();
           } else if (index == 2) {
             Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      SettingsPage(onThemeChanged: (bool) {})),
-            );
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        SettingsPage(onThemeChanged: (bool value) {})));
           }
         },
         items: const [
@@ -370,11 +327,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ✅ Vehicle Card
-  // ✅ Vehicle Card with "Book Now" Button
   Widget _buildVehicleCard(Vehicle vehicle) {
     return SizedBox(
-      height: 300, // 🔥 Increase Card Height
+      height: 300,
       child: Card(
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -382,46 +337,35 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ✅ Vehicle Image (Larger)
             GestureDetector(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => Dialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: InteractiveViewer(
-                      panEnabled: true,
-                      minScale: 0.5,
-                      maxScale: 4,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          vehicle.vehicleImage,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => Dialog(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    minScale: 0.5,
+                    maxScale: 4,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(vehicle.vehicleImage,
+                          fit: BoxFit.contain),
                     ),
-                  ),
-                );
-              },
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(15),
-                  topRight: Radius.circular(15),
-                ),
-                child: SizedBox(
-                  height: 100,
-                  child: Image.network(
-                    vehicle.vehicleImage,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
                   ),
                 ),
               ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    topRight: Radius.circular(15)),
+                child: SizedBox(
+                  height: 100,
+                  child: Image.network(vehicle.vehicleImage,
+                      fit: BoxFit.cover, width: double.infinity),
+                ),
+              ),
             ),
-
-            // ✅ Vehicle Details
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(10.0),
@@ -430,63 +374,45 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     _buildDetailRow(Icons.directions_car, vehicle.model),
                     _buildDetailRow(Icons.location_on, vehicle.location),
-                    _buildDetailRow(
-                        Icons.home, vehicle.address), // ✅ Address Included
+                    _buildDetailRow(Icons.home, vehicle.address),
                     _buildDetailRow(Icons.attach_money, vehicle.price),
                     _buildDetailRow(
-                      Icons.access_time,
-                      vehicle.timePeriod.contains("to")
-                          ? "Duration: ${vehicle.timePeriod}"
-                          : "${vehicle.timePeriod} days",
-                    ),
-
-                    const Spacer(), // 🔥 Push Buttons to Bottom
-
-                    // ✅ "Give Feedback" Button
+                        Icons.access_time,
+                        vehicle.timePeriod.contains("to")
+                            ? "Duration: ${vehicle.timePeriod}"
+                            : "${vehicle.timePeriod} days"),
+                    const Spacer(),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  FeedbackPage(vehicleId: vehicle.id),
-                            ),
-                          );
-                        },
+                                builder: (context) =>
+                                    FeedbackPage(vehicleId: vehicle.id))),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyan,
-                        ),
-                        child: const Text(
-                          "Give Feedback",
-                          style: TextStyle(color: Colors.white),
-                        ),
+                            backgroundColor: Colors.cyan),
+                        child: const Text("Give Feedback",
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ),
-
                     const SizedBox(height: 5),
-
-                    // ✅ "Book Now" Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
+                        onPressed: () async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  BookingPage(vehicle: vehicle),
-                            ),
+                                builder: (context) =>
+                                    BookingPage(vehicle: vehicle)),
                           );
+                          if (result == true) _fetchVehicles();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text(
-                          "Book Now",
-                          style: TextStyle(color: Colors.white),
-                        ),
+                            backgroundColor: Colors.green),
+                        child: const Text("Book Now",
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ),
                   ],
@@ -499,7 +425,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ✅ 🔥 Fixed _buildDetailRow method
   Widget _buildDetailRow(IconData icon, String text) {
     return Row(
       children: [

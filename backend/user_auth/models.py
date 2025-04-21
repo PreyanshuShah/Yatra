@@ -48,6 +48,7 @@ class Vehicle(models.Model):
     vehicle_image = models.ImageField(upload_to="vehicles/")
     created_at = models.DateTimeField(auto_now_add=True)
     is_available = models.BooleanField(default=True)
+    is_approved = models.BooleanField(default=False) 
 
 
     def __str__(self):

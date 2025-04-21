@@ -4,13 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Import other pages for navigation
 import 'home_page.dart';
 import 'settings_page.dart';
 
 class AddPage extends StatefulWidget {
-  final Function(Map<String, dynamic>)
-      onVehicleAdded; // Accept callback function
+  final Function(Map<String, dynamic>) onVehicleAdded;
 
   const AddPage({Key? key, required this.onVehicleAdded}) : super(key: key);
 
@@ -24,7 +22,6 @@ class _AddPageState extends State<AddPage> {
 
   final TextEditingController modelController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
-  final TextEditingController timePeriodController = TextEditingController();
   final TextEditingController contactController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
 
@@ -37,7 +34,9 @@ class _AddPageState extends State<AddPage> {
 
   bool _isLoading = false;
   int _selectedIndex = 1;
+  DateTime? startDate, endDate;
 
+  // File Picker function to pick files (vehicle and license images)
   Future<void> _pickFile(bool isVehicle) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (result != null) {
@@ -49,14 +48,13 @@ class _AddPageState extends State<AddPage> {
     }
   }
 
-  DateTime? startDate, endDate; // ✅ Date range variables
-
+  // Date Range Picker for selecting rental period
   Future<void> _selectDateRange(BuildContext context) async {
     DateTime now = DateTime.now();
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       firstDate: now,
-      lastDate: now.add(const Duration(days: 365)), // 1-year limit
+      lastDate: now.add(const Duration(days: 365)),
     );
 
     if (picked != null) {
@@ -67,25 +65,28 @@ class _AddPageState extends State<AddPage> {
     }
   }
 
+  // Form submission function
   Future<void> _submitForm() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? accessToken = prefs.getString('access_token');
 
+    // Check if the user is logged in
     if (accessToken == null) {
       _showSnackbar('You must log in first!', Colors.redAccent);
       return;
     }
 
+    // Validate all required fields
     if (modelController.text.isEmpty ||
         selectedLocation == null ||
         addressController.text.isEmpty ||
         priceController.text.isEmpty ||
-        startDate ==
-            null || // ✅ Check startDate instead of timePeriodController
-        endDate == null || // ✅ Check endDate instead of timePeriodController
+        startDate == null ||
+        endDate == null ||
         contactController.text.isEmpty ||
-        vehicleImage == null ||
+        vehicleImage == null || // Check for vehicle image
         licenseImage == null) {
+      // Check for license image
       _showSnackbar('All fields are required!', Colors.redAccent);
       return;
     }
@@ -101,10 +102,15 @@ class _AddPageState extends State<AddPage> {
         'time_period':
             "${DateFormat('yyyy-MM-dd').format(startDate!)} to ${DateFormat('yyyy-MM-dd').format(endDate!)}",
         'phone_number': contactController.text.trim(),
-        'vehicle_image': MultipartFile.fromBytes(vehicleImage!.bytes!,
-            filename: vehicleImage!.name),
-        'license_document': MultipartFile.fromBytes(licenseImage!.bytes!,
-            filename: licenseImage!.name),
+        // Handle vehicle image and license image null checks
+        'vehicle_image': vehicleImage != null
+            ? MultipartFile.fromBytes(vehicleImage!.bytes!,
+                filename: vehicleImage!.name)
+            : null,
+        'license_document': licenseImage != null
+            ? MultipartFile.fromBytes(licenseImage!.bytes!,
+                filename: licenseImage!.name)
+            : null,
       });
 
       var response = await Dio().post(
@@ -113,9 +119,9 @@ class _AddPageState extends State<AddPage> {
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
 
+      // Handle the response
       if (response.statusCode == 201) {
         _showSnackbar('Vehicle Added Successfully!', Colors.green);
-        // ignore: use_build_context_synchronously
         Navigator.pop(context);
       } else {
         _showSnackbar(
@@ -128,11 +134,13 @@ class _AddPageState extends State<AddPage> {
     }
   }
 
+  // Function to show a Snackbar message
   void _showSnackbar(String message, Color color) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
+  // Build the UI for the Add Vehicle page
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,22 +165,16 @@ class _AddPageState extends State<AddPage> {
                       color: Colors.white),
                 ),
                 const SizedBox(height: 15),
-
-                // ✅ Replaced Vehicle Model Dropdown with a TextField
                 _buildTextField(
                     'Vehicle Model', modelController, Icons.directions_car),
-
-                // ✅ Location Dropdown
                 _buildDropdownField(
                     'Location',
                     selectedLocation,
                     predefinedLocations,
                     (value) => setState(() => selectedLocation = value)),
-
                 _buildTextField('Address', addressController, Icons.home),
                 _buildTextField('Rental Price', priceController, Icons.money),
                 _buildDateRangePicker(),
-
                 _buildTextField('Phone Number', contactController, Icons.phone),
                 _buildUploadSection('Upload Vehicle Image', Icons.camera_alt,
                     vehicleImage?.name, () => _pickFile(true)),
@@ -181,10 +183,7 @@ class _AddPageState extends State<AddPage> {
                     Icons.file_upload,
                     licenseImage?.name,
                     () => _pickFile(false)),
-
                 const SizedBox(height: 20),
-
-                // ✅ Submit Button
                 Center(
                   child: _isLoading
                       ? const CircularProgressIndicator()
@@ -246,14 +245,14 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
+  // Dropdown for location
   Widget _buildDropdownField(String label, String? value, List<String> items,
       ValueChanged<String?> onChanged) {
     return _buildCard(
       DropdownButtonFormField<String>(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(Icons.location_on,
-              color: Colors.cyan), // ✅ Location Icon Added
+          prefixIcon: const Icon(Icons.location_on, color: Colors.cyan),
           border: InputBorder.none,
         ),
         value: value,
@@ -265,6 +264,7 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
+  // Text fields for user input
   Widget _buildTextField(
       String label, TextEditingController controller, IconData icon) {
     return _buildCard(
@@ -278,6 +278,7 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
+  // Upload section for images and documents
   Widget _buildUploadSection(
       String label, IconData icon, String? fileName, VoidCallback onPressed) {
     return _buildCard(
@@ -290,6 +291,7 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
+  // Date range picker for start and end date
   Widget _buildDateRangePicker() {
     return GestureDetector(
       onTap: () => _selectDateRange(context),
@@ -298,7 +300,7 @@ class _AddPageState extends State<AddPage> {
           leading: const Icon(Icons.date_range, color: Colors.cyan),
           title: Text(
             startDate != null && endDate != null
-                ? "${DateFormat('yyyy-MM-dd').format(startDate!)}${DateFormat('yyyy-MM-dd').format(endDate!)}"
+                ? "${DateFormat('yyyy-MM-dd').format(startDate!)} → ${DateFormat('yyyy-MM-dd').format(endDate!)}"
                 : "Select Date Range",
             style: const TextStyle(fontSize: 16),
           ),
@@ -313,6 +315,7 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
+  // Helper method to wrap widgets in a Card
   Widget _buildCard(Widget child) {
     return Card(
       elevation: 3,

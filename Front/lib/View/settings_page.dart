@@ -87,7 +87,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
 
                     // Dark Mode Toggle
-                    _buildDarkModeToggle(),
                   ],
                 ),
               ),
@@ -140,26 +139,6 @@ class _SettingsPageState extends State<SettingsPage> {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
         trailing: const Icon(Icons.arrow_forward_ios, color: Colors.black54),
         onTap: onTap,
-      ),
-    );
-  }
-
-  // ✅ Dark Mode Toggle Switch
-  Widget _buildDarkModeToggle() {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: const Icon(Icons.dark_mode, color: Colors.black87),
-        title: const Text(
-          'Dark Mode',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-        ),
-        trailing: Switch(
-          value: _isDarkMode,
-          onChanged: _toggleDarkMode,
-          activeColor: Colors.green,
-        ),
       ),
     );
   }

@@ -21,6 +21,8 @@ class _BookingPageState extends State<BookingPage> {
   DateTime? startDate, endDate;
   late DateTime now;
   late int maxDays;
+  bool _isBooked = false;
+  int rentalDays = 0;
 
   @override
   void initState() {
@@ -37,6 +39,9 @@ class _BookingPageState extends State<BookingPage> {
 
   @override
   Widget build(BuildContext context) {
+    double totalPrice =
+        rentalDays * (double.tryParse(widget.vehicle.price) ?? 0.0);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.cyan.shade800,
@@ -62,13 +67,45 @@ class _BookingPageState extends State<BookingPage> {
             child: Column(
               children: [
                 _vehicleImage(),
-                _vehicleDetailsCard(),
+                _vehicleDetailsCard(totalPrice),
                 const SizedBox(height: 25),
-                _selectDateButton(),
-                const SizedBox(height: 15),
-                _isBooking
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : _confirmBookingButton(),
+                if (_isBooked)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade700),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          "Vehicle successfully booked!",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!_isBooked) ...[
+                  _selectDateButton(),
+                  const SizedBox(height: 15),
+                  Text("Total: NPR ${totalPrice.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                  const SizedBox(height: 10),
+                  _isBooking
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : _confirmBookingButton(totalPrice),
+                ]
               ],
             ),
           ),
@@ -96,7 +133,7 @@ class _BookingPageState extends State<BookingPage> {
         ),
       );
 
-  Widget _vehicleDetailsCard() => Card(
+  Widget _vehicleDetailsCard(double totalPrice) => Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 6,
         color: Colors.white.withOpacity(0.95),
@@ -108,8 +145,8 @@ class _BookingPageState extends State<BookingPage> {
               _buildDetailRow(
                   Icons.directions_car, "Model", widget.vehicle.model),
               _buildDetailRow(Icons.home, "Address", widget.vehicle.address),
-              _buildDetailRow(
-                  Icons.attach_money, "Price", "NPR ${widget.vehicle.price}"),
+              _buildDetailRow(Icons.attach_money, "Price",
+                  "NPR ${widget.vehicle.price} per day"),
               _buildDetailRow(Icons.access_time, "Available Days",
                   "${widget.vehicle.timePeriod} days"),
               _buildDetailRow(
@@ -175,27 +212,13 @@ class _BookingPageState extends State<BookingPage> {
         ),
       );
 
-  Widget _confirmBookingButton() => ElevatedButton.icon(
-        onPressed: _bookVehicle,
+  Widget _confirmBookingButton(double totalPrice) => ElevatedButton.icon(
+        onPressed: () => _bookVehicle(totalPrice),
         icon: const Icon(Icons.check, size: 20),
         label: const Text("Confirm Booking",
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 6,
-        ),
-      );
-
-  Widget _verifyPaymentButton(String pidx) => ElevatedButton.icon(
-        onPressed: () => _verifyKhaltiPayment(pidx),
-        icon: const Icon(Icons.verified, size: 20),
-        label: const Text("Verify Payment"),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
           shape:
@@ -212,10 +235,100 @@ class _BookingPageState extends State<BookingPage> {
       lastDate: maxAllowedEndDate,
     );
     if (picked != null) {
+      final difference = picked.end.difference(picked.start).inDays + 1;
+      if (difference > maxDays) {
+        _showMessage(
+            "❌ You can only book for up to $maxDays days.", Colors.red);
+        return;
+      }
       setState(() {
         startDate = picked.start;
         endDate = picked.end;
+        rentalDays = difference;
       });
+    }
+  }
+
+  Future<void> _bookVehicle(double totalPrice) async {
+    if (startDate == null || endDate == null) {
+      _showMessage("❌ Please select rental dates!", Colors.red);
+      return;
+    }
+
+    setState(() => _isBooking = true);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("access_token");
+
+    if (token == null) {
+      _showMessage("❌ Authentication Error! Please log in again.", Colors.red);
+      setState(() => _isBooking = false);
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse("https://a.khalti.com/api/v2/epayment/initiate/"),
+        headers: {
+          "Authorization": "Key 76696163503e4c65bd22cc09a85af655",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "return_url": "http://127.0.0.1:8000/auth/payment/success/",
+          "website_url": "http://127.0.0.1:8000/",
+          "amount": (totalPrice * 100).round(),
+          "purchase_order_id":
+              "order_${widget.vehicle.id}_${DateTime.now().millisecondsSinceEpoch}",
+          "purchase_order_name": "Vehicle Rental - ${widget.vehicle.model}",
+          "customer_info": {
+            "name": "Flutter User",
+            "email": "user@example.com",
+            "phone": "9800000000"
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final paymentUrl = data['payment_url'];
+        final pidx = data['pidx'];
+
+        if (await canLaunchUrl(Uri.parse(paymentUrl))) {
+          await launchUrl(Uri.parse(paymentUrl),
+              mode: LaunchMode.externalApplication);
+
+          _showMessage(
+              "🔁 Please return and tap Verify Payment", Colors.orange);
+
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              title: const Text("Thank you for your payment!"),
+              content: const Text("We are always there to assist you."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () => _verifyKhaltiPayment(pidx),
+                  child: const Text("Verify Payment"),
+                )
+              ],
+            ),
+          );
+        } else {
+          _showMessage("❌ Could not open payment page.", Colors.red);
+        }
+      } else {
+        _showMessage("❌ Failed to initiate payment", Colors.red);
+      }
+    } catch (e) {
+      print('❌ Exception: $e');
+      _showMessage("❌ Error occurred during payment", Colors.red);
+    } finally {
+      setState(() => _isBooking = false);
     }
   }
 
@@ -246,10 +359,10 @@ class _BookingPageState extends State<BookingPage> {
         _showMessage(
             "✅ Payment Verified! Transaction ID: ${data['transaction_id']}",
             Colors.green);
-
-        await _markVehicleUnavailable(); // ✅ Mark vehicle unavailable
-
-        Navigator.pop(context);
+        await _markVehicleUnavailable();
+        setState(() {
+          _isBooked = true;
+        });
       } else {
         _showMessage("❌ ${data['error'] ?? 'Verification failed'}", Colors.red);
       }
@@ -259,90 +372,9 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
-  Future<void> _bookVehicle() async {
-    if (startDate == null || endDate == null) {
-      _showMessage("❌ Please select rental dates!", Colors.red);
-      return;
-    }
-
-    setState(() => _isBooking = true);
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString("access_token");
-
-    if (token == null) {
-      _showMessage("❌ Authentication Error! Please log in again.", Colors.red);
-      setState(() => _isBooking = false);
-      return;
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse("https://a.khalti.com/api/v2/epayment/initiate/"),
-        headers: {
-          "Authorization": "Key 76696163503e4c65bd22cc09a85af655",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "return_url": "http://127.0.0.1:8000/auth/payment/success/",
-          "website_url": "http://127.0.0.1:8000/",
-          "amount": (double.parse(widget.vehicle.price) * 100).round(),
-          "purchase_order_id":
-              "order_${widget.vehicle.id}_${DateTime.now().millisecondsSinceEpoch}",
-          "purchase_order_name": "Vehicle Rental - ${widget.vehicle.model}",
-          "customer_info": {
-            "name": "Flutter User",
-            "email": "user@example.com",
-            "phone": "9800000000"
-          }
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final paymentUrl = data['payment_url'];
-        final pidx = data['pidx'];
-
-        if (await canLaunchUrl(Uri.parse(paymentUrl))) {
-          await launchUrl(Uri.parse(paymentUrl),
-              mode: LaunchMode.externalApplication);
-
-          _showMessage(
-              "🔁 Please return and tap Verify Payment", Colors.orange);
-
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => AlertDialog(
-              title: const Text("Thank you for your payment!"),
-              content: const Text("we are always there to assist you."),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
-                ),
-                _verifyPaymentButton(pidx),
-              ],
-            ),
-          );
-        } else {
-          _showMessage("❌ Could not open payment page.", Colors.red);
-        }
-      } else {
-        _showMessage("❌ Failed to initiate payment", Colors.red);
-      }
-    } catch (e) {
-      print('❌ Exception: $e');
-      _showMessage("❌ Error occurred during payment", Colors.red);
-    } finally {
-      setState(() => _isBooking = false);
-    }
-  }
-
   Future<void> _markVehicleUnavailable() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("access_token");
-
     if (token == null) return;
 
     try {
@@ -355,8 +387,7 @@ class _BookingPageState extends State<BookingPage> {
         body: jsonEncode({"vehicle_id": widget.vehicle.id}),
       );
 
-      if (response.statusCode == 200) {
-      } else {
+      if (response.statusCode != 200) {
         print("⚠️ Failed to mark unavailable: ${response.body}");
       }
     } catch (e) {

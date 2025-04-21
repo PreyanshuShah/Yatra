@@ -62,6 +62,7 @@ class _LoginPageState extends State<LoginPage> {
 
           // ✅ Navigate to HomePage
           Navigator.pushReplacement(
+            // ignore: use_build_context_synchronously
             context,
             MaterialPageRoute(
               builder: (context) => HomePage(
@@ -70,6 +71,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         } else {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
@@ -166,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => ForgotPasswordPage()),
+                            builder: (context) => const ForgotPasswordPage()),
                       );
                     },
                     child: const Text(
@@ -191,12 +193,26 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       );
                     },
-                    child: const Text(
-                      "Don't have an account? Sign Up",
-                      style: TextStyle(
+                    child: RichText(
+                      text: const TextSpan(
+                        text: "Don't have an account? ",
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
-                          fontWeight: FontWeight.bold),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: "SignUp",
+                            style: TextStyle(
+                              color: Colors
+                                  .blue, // Change this to whatever color you want
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

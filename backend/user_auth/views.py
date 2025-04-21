@@ -51,11 +51,11 @@ def register(request):
 
     user = User.objects.create_user(username=username, password=password, email=email)
     
-    # Return a success message with status 201
+  
     return Response({"message": "User registered successfully", "user": username}, status=status.HTTP_201_CREATED)
 
 
-# Login API
+
 @api_view(["POST"])
 def login(request):
     username = request.data.get("username")
@@ -124,17 +124,23 @@ def add_vehicle(request):
             time_period=time_period,
             license_document=license_document,
             vehicle_image=vehicle_image,
+            is_available=True,
+            is_approved=False 
         )
         serializer = VehicleSerializer(vehicle)
         return Response({"message": "Vehicle added successfully!", "vehicle": serializer.data}, status=201)
+
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
+
 @api_view(["GET"])
 def list_vehicles(request):
-    vehicles = Vehicle.objects.filter(is_available=True)  # ✅ Only show available vehicles
+
+    vehicles = Vehicle.objects.filter(is_available=True, is_approved=True)
     serializer = VehicleSerializer(vehicles, many=True, context={'request': request})
     return Response(serializer.data)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -148,7 +154,8 @@ class VehicleListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return Vehicle.objects.filter(is_available=True).prefetch_related('feedbacks')
+        return Vehicle.objects.filter(is_available=True, is_approved=True).prefetch_related('feedbacks')
+
 
 
 class VehicleDetailView(generics.RetrieveAPIView):
@@ -156,7 +163,8 @@ class VehicleDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        return Vehicle.objects.filter(is_available=True).prefetch_related('feedbacks')
+        return Vehicle.objects.filter(is_available=True, is_approved=True).prefetch_related('feedbacks')
+
 
 
 @api_view(["POST"])
@@ -297,7 +305,7 @@ def user_transactions(request):
 
 
 from django.core.mail import send_mail
-from .models import Notification, Payment, Vehicle  # Make sure Notification is imported
+from .models import Notification, Payment, Vehicle  
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -339,7 +347,7 @@ def verify_khalti_epayment(request):
             except Vehicle.DoesNotExist:
                 return Response({"error": "Vehicle not found"}, status=404)
 
-            # ✅ Create Payment
+           
             Payment.objects.create(
                 user=user,
                 vehicle=vehicle,
@@ -348,13 +356,13 @@ def verify_khalti_epayment(request):
                 mobile=data.get("mobile")
             )
 
-            # ✅ Send in-app notification
+          
             Notification.objects.create(
                 user=user,
                 message=f"Booking confirmed for vehicle: {vehicle.model}!"
             )
 
-            # ✅ Send email
+           
             send_mail(
                 "✅ Booking Successful - Yatra App",
                 f"Dear {user.username},\n\nYour booking for '{vehicle.model}' has been successfully confirmed.\n\nAmount Paid: Rs. {int(data['total_amount']) / 100}\nTransaction ID: {transaction_id}\n\nThank you for using Yatra!",
@@ -505,5 +513,31 @@ def mark_vehicle_unavailable(request):
         return Response({"message": "Vehicle marked as unavailable"}, status=200)
     except Vehicle.DoesNotExist:
         return Response({"error": "Vehicle not found"}, status=404)
+    
 
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def approve_vehicle(request, vehicle_id):
+    try:
+        vehicle = Vehicle.objects.get(id=vehicle_id)
+        vehicle.is_approved = True
+        vehicle.save()
+
+        # Optional: notify the user
+        Notification.objects.create(
+            user=vehicle.user,
+            message=f"✅ Your vehicle '{vehicle.model}' has been approved!"
+        )
+
+        return Response({"message": "Vehicle approved successfully!"})
+    except Vehicle.DoesNotExist:
+        return Response({"error": "Vehicle not found"}, status=404)
+
+    
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def list_pending_vehicles(request):
+    vehicles = Vehicle.objects.filter(is_approved=False)
+    serializer = VehicleSerializer(vehicles, many=True, context={'request': request})
+    return Response(serializer.data)
 

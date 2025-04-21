@@ -3,34 +3,31 @@ from django.utils.html import format_html
 from django.urls import reverse, path
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-
 from .models import Profile, Vehicle, Feedback, Notification, Payment
-from .admin_forms import NotificationForm  # Custom form for input
+from .admin_forms import NotificationForm
 from django.contrib.auth.models import User
 
-
-# ✅ Inline Feedback Display in Vehicle Admin
+# Inline Feedback
 class FeedbackInline(admin.TabularInline):
     model = Feedback
     extra = 1
 
-
-# ✅ Custom Vehicle Admin with Notification Button
 @admin.register(Vehicle)
 class CustomVehicleAdmin(admin.ModelAdmin):
     list_display = (
         'model', 'user', 'formatted_price', 'location', 'address',
         'phone_number', 'time_period', 'created_at', 'view_image',
-        'view_license', 'send_notification_button', 'is_available'  ,'delete_button'
+        'view_license', 'is_available', 'is_approved',  # ✅ show approval status
+        'approve_button', 'send_notification_button', 'delete_button'
     )
     search_fields = ('model', 'user__username', 'location', 'address', 'phone_number', 'price')
-    list_filter = ('location', 'created_at', 'price')
+    list_filter = ('location', 'created_at', 'price', 'is_approved')
     ordering = ('-created_at',)
     inlines = [FeedbackInline]
     actions = ['delete_selected']
 
     def formatted_price(self, obj):
-        return f"${obj.price}"
+        return f"Rs. {obj.price}"
     formatted_price.short_description = "Price"
 
     def view_image(self, obj):
@@ -61,10 +58,18 @@ class CustomVehicleAdmin(admin.ModelAdmin):
         return format_html('<a class="button" href="{}" style="color:blue;">📩 Notify</a>', send_url)
     send_notification_button.short_description = "Notify User"
 
+    def approve_button(self, obj):
+        if not obj.is_approved:
+            approve_url = reverse('admin:approve_vehicle', args=[obj.pk])
+            return format_html('<a class="button" href="{}" style="color:green;">✅ Approve</a>', approve_url)
+        return "✔️ Approved"
+    approve_button.short_description = "Approve"
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path('send-notification/<int:vehicle_id>/', self.admin_site.admin_view(self.send_vehicle_notification), name='send_vehicle_notification'),
+            path('approve-vehicle/<int:vehicle_id>/', self.admin_site.admin_view(self.approve_vehicle), name='approve_vehicle'),
         ]
         return custom_urls + urls
 
@@ -92,8 +97,20 @@ class CustomVehicleAdmin(admin.ModelAdmin):
             'title': f"Send Notification to {user.username}"
         })
 
+    def approve_vehicle(self, request, vehicle_id):
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+        vehicle.is_approved = True
+        vehicle.save()
 
-# ✅ Feedback Admin
+        Notification.objects.create(
+            user=vehicle.user,
+            message=f"✅ Your vehicle '{vehicle.model}' has been approved and is now live!"
+        )
+
+        self.message_user(request, f"✅ Vehicle '{vehicle.model}' approved!", level=messages.SUCCESS)
+        return HttpResponseRedirect(reverse('admin:user_auth_vehicle_changelist'))
+
+# Feedback Admin
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
     list_display = ('user', 'vehicle', 'colored_rating', 'comment', 'created_at', 'delete_button')
@@ -116,8 +133,7 @@ class FeedbackAdmin(admin.ModelAdmin):
         return format_html('<a class="button" href="{}" style="color:red;">❌ Delete</a>', delete_url)
     delete_button.short_description = "Delete"
 
-
-# ✅ Profile Admin
+# Profile Admin
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'created_at', 'profile_link', 'delete_button')
@@ -134,8 +150,7 @@ class ProfileAdmin(admin.ModelAdmin):
         return format_html('<a class="button" href="{}" style="color:red;">❌ Delete</a>', delete_url)
     delete_button.short_description = "Delete"
 
-
-# ✅ Notification Admin
+# Notification Admin
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ("user", "message", "is_read", "created_at")
@@ -157,8 +172,7 @@ class NotificationAdmin(admin.ModelAdmin):
         self.message_user(request, "Notification sent to all users!")
     send_notification.short_description = "Send Notification to All Users"
 
-
-# ✅ Payment Admin
+# Payment Admin
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('user', 'vehicle', 'amount', 'transaction_id', 'mobile', 'paid_at')

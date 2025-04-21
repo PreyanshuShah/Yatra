@@ -1,6 +1,7 @@
+
 from django.urls import path
 
-from .views import delete_vehicle, khalti_payment_success, mark_vehicle_unavailable, update_vehicle
+from .views import approve_vehicle, delete_vehicle, khalti_payment_success, list_pending_vehicles, mark_vehicle_unavailable, update_vehicle
 
 from .views import (
     register, login, refresh_token, protected_view, password_reset_request,
@@ -44,13 +45,13 @@ urlpatterns = [
     # ✅ Payments
    
     path("user-transactions/", user_transactions, name="user_transactions"),
-    path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
+   # path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("verify-khalti-epayment/", verify_khalti_epayment, name="verify_khalti_epayment"),
     path("payment/success/", khalti_payment_success, name="payment-success"),
+
+    # ✅ Admin Approval
+    path("admin/pending-vehicles/", list_pending_vehicles, name="pending_vehicles"),
+    path("admin/approve-vehicle/<int:vehicle_id>/", approve_vehicle, name="approve_vehicle"),
+
 ]
    
-
-
-
-
-

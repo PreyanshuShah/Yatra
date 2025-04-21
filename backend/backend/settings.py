@@ -2,22 +2,22 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
-# ✅ Base directory
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ✅ Secret Key (Keep this secret in production)
+
 SECRET_KEY = 'your-secret-key'
 
-# ✅ Debug Mode (Change to False in Production)
+
 DEBUG = True
 
-# ✅ Allow All Hosts (For Development Only)
+
 ALLOWED_HOSTS = ['*']
 
 
 
 
-# ✅ Installed Apps
+
 INSTALLED_APPS = [
     # Default Django apps
     'django.contrib.auth',
@@ -26,15 +26,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'jazzmin',  # ✅ Django Admin UI Theme
+    'jazzmin',  
 
     # Third-party apps
-    'corsheaders',  # ✅ Enable CORS Headers
+    'corsheaders',  
     'rest_framework',
-    'rest_framework_simplejwt',  # ✅ Add JWT Auth
+    'rest_framework_simplejwt',  
     'allauth',
     'allauth.account',
-    'allauth.socialaccount',  # ✅ Social authentication (if needed)
+    'allauth.socialaccount',  
 
     # Your custom apps
     'user_auth',  # ✅ Your authentication app
@@ -67,7 +67,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # ✅ Keep this only!
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,24 +80,32 @@ TEMPLATES = [
     },
 ]
 
-
 # ✅ WSGI Application
 WSGI_APPLICATION = 'backend.wsgi.application'
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'backend_db',
+#         'USER': 'root',
+#         'PASSWORD': '9807',  # Make sure this matches your MySQL password
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+       
+#     }
+# }
 
-# ✅ Database Configuration (Using MySQL)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'backend_db',
+        'NAME': 'fyp',
         'USER': 'root',
-        'PASSWORD': '9807',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-        },
+        'PASSWORD': 'root',  # Make sure this matches your MySQL password
+        'HOST': 'localhost',
+        'PORT': '3307',
+       
     }
 }
+
 
 # ✅ Password Validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -127,7 +135,7 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "preyanshushah@gmail.com"
-EMAIL_HOST_PASSWORD = "tqii wcot lrjf wvvm"
+EMAIL_HOST_PASSWORD = "hyua gknd wshb lkdn"
 
 # ✅ Allow Large File Uploads for Vehicle Images & Documents
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # ✅ Allows files up to 5MB
