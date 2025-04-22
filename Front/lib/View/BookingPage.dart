@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'home_page.dart';
+import 'package:another_flushbar/flushbar.dart';
 
 class BookingPage extends StatefulWidget {
   final Vehicle vehicle;
@@ -237,8 +238,20 @@ class _BookingPageState extends State<BookingPage> {
     if (picked != null) {
       final difference = picked.end.difference(picked.start).inDays + 1;
       if (difference > maxDays) {
-        _showMessage(
-            "❌ You can only book for up to $maxDays days.", Colors.red);
+        showDialog(
+          // ignore: use_build_context_synchronously
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Booking Limit Exceeded"),
+            content: Text("❌ You can only book for up to $maxDays days."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
         return;
       }
       setState(() {
@@ -259,9 +272,29 @@ class _BookingPageState extends State<BookingPage> {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("access_token");
+    int? userId = prefs.getInt("user_id"); // ✅ Grab logged-in user's ID
 
-    if (token == null) {
+    // 🔐 Validate login
+    if (token == null || userId == null) {
       _showMessage("❌ Authentication Error! Please log in again.", Colors.red);
+      setState(() => _isBooking = false);
+      return;
+    }
+
+    // ❌ Prevent self-booking
+    if (userId == widget.vehicle.ownerId) {
+      Flushbar(
+        margin: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(12),
+        backgroundColor: Colors.redAccent,
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.block, color: Colors.white),
+        message: "You cannot book your own vehicle.",
+        duration: const Duration(seconds: 3),
+        animationDuration: const Duration(milliseconds: 500),
+        forwardAnimationCurve: Curves.easeInOut,
+      ).show(context);
+
       setState(() => _isBooking = false);
       return;
     }

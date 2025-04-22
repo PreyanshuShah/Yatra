@@ -5,9 +5,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:front/View/home_page.dart';
 import 'package:front/View/signup_page.dart';
 import 'package:front/View/login_page.dart';
+import 'package:front/helpers/notification_helper.dart'; // ✅ Import added
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  NotificationHelper.initialize(); // ✅ Notification init
 
   SharedPreferences prefs = await SharedPreferences.getInstance();
   bool isDarkMode = prefs.getBool('isDarkMode') ?? false;
@@ -59,8 +62,6 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.cyan,
         brightness: _isDarkMode ? Brightness.dark : Brightness.light,
       ),
-
-      // ✅ Localization support (still included if you're using it)
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -70,8 +71,6 @@ class _MyAppState extends State<MyApp> {
         Locale('en', 'US'),
         Locale('ne', 'NP'),
       ],
-
-      // ✅ Initial screen based on token presence
       home: _token != null
           ? HomePage(
               onThemeChanged: _toggleDarkMode,
@@ -81,8 +80,6 @@ class _MyAppState extends State<MyApp> {
               onThemeChanged: _toggleDarkMode,
               isDarkMode: _isDarkMode,
             ),
-
-      // ✅ Routes
       routes: {
         '/login': (context) =>
             LoginPage(onThemeChanged: _toggleDarkMode, isDarkMode: _isDarkMode),

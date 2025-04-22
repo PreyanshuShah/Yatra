@@ -94,13 +94,23 @@ class _AddPageState extends State<AddPage> {
     setState(() => _isLoading = true);
 
     try {
+      // Ensure `startDate` and `endDate` are always valid
+      startDate ??= DateTime.now(); // Default to current date if null
+      endDate ??= DateTime.now(); // Default to current date if null
+
+      // Ensure selectedLocation is never null
+      selectedLocation ??= 'Kathmandu'; // Default to 'Kathmandu' if null
+
+      String formattedTimePeriod =
+          "${DateFormat('yyyy-MM-dd').format(startDate!)} to ${DateFormat('yyyy-MM-dd').format(endDate!)}";
+
       FormData formData = FormData.fromMap({
         'model': modelController.text.trim(),
-        'location': selectedLocation,
+        'location':
+            selectedLocation!, // Force unwrap because we set a default value
         'address': addressController.text.trim(),
         'price': priceController.text.trim(),
-        'time_period':
-            "${DateFormat('yyyy-MM-dd').format(startDate!)} to ${DateFormat('yyyy-MM-dd').format(endDate!)}",
+        'time_period': formattedTimePeriod,
         'phone_number': contactController.text.trim(),
         // Handle vehicle image and license image null checks
         'vehicle_image': vehicleImage != null

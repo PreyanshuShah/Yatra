@@ -43,31 +43,30 @@ class _LoginPageState extends State<LoginPage> {
 
         if (response.statusCode == 200) {
           String accessToken = responseData['tokens']['access'];
-          String refreshToken =
-              responseData['tokens']['refresh']; // ✅ Get refresh token
+          String refreshToken = responseData['tokens']['refresh'];
 
-          // ✅ Save tokens in SharedPreferences
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString('access_token', accessToken);
           await prefs.setString('refresh_token', refreshToken);
-          await prefs.setString('username', _usernameController.text.trim());
+          await prefs.setString('username', responseData['user']['username']);
+          await prefs.setInt(
+              'user_id', responseData['user']['id']); // ✅ Fix here
 
-          print('Access Token: $accessToken'); // Debugging
-          print('Refresh Token: $refreshToken'); // Debugging
+          print('Access Token: $accessToken');
+          print('Refresh Token: $refreshToken');
+          print('User ID: ${responseData['user']['id']}');
 
-          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('✅ Login Successful!')),
           );
 
-          // ✅ Navigate to HomePage
           Navigator.pushReplacement(
-            // ignore: use_build_context_synchronously
             context,
             MaterialPageRoute(
               builder: (context) => HomePage(
-                  onThemeChanged: widget.onThemeChanged,
-                  isDarkMode: widget.isDarkMode),
+                onThemeChanged: widget.onThemeChanged,
+                isDarkMode: widget.isDarkMode,
+              ),
             ),
           );
         } else {

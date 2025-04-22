@@ -36,6 +36,7 @@ dependencies:
   # ✅ Auth
   jwt_decoder: ^2.0.1
   flutter_plugin_android_lifecycle: ^2.0.18
+  another_flushbar: ^1.12.30
 
   
   

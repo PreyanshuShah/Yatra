@@ -17,6 +17,7 @@ class Vehicle {
   final String price;
   final String timePeriod;
   final String vehicleImage;
+  final int ownerId; // ✅ Add this
 
   Vehicle({
     required this.id,
@@ -27,6 +28,7 @@ class Vehicle {
     required this.price,
     required this.timePeriod,
     required this.vehicleImage,
+    required this.ownerId,
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Vehicle {
       price: json['price'],
       timePeriod: json['time_period'],
       vehicleImage: json['vehicle_image'],
+      ownerId: json['owner_id'],
     );
   }
 }
@@ -70,7 +73,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUsername();
     _fetchVehicles();
-    Timer.periodic(Duration(seconds: 30), (timer) {
+    Timer.periodic(const Duration(seconds: 30), (timer) {
       _fetchVehicles();
     });
   }

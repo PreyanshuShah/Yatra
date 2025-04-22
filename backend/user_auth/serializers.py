@@ -17,17 +17,22 @@ class VehicleSerializer(serializers.ModelSerializer):
     feedbacks = FeedbackSerializer(many=True, read_only=True)
     license_document = serializers.FileField(required=False, allow_null=True)
 
-    # Additional useful fields
+    # ✅ Add this line
+    owner_id = serializers.IntegerField(source='user.id', read_only=True)
+
     is_approved = serializers.BooleanField(read_only=True)
     is_available = serializers.BooleanField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
+    owner_id = serializers.IntegerField(source='user.id', read_only=True)
+
 
     class Meta:
         model = Vehicle
         fields = [
-            'id', 'model', 'location', 'address', 'phone_number', 
+            'id', 'model', 'location', 'address', 'phone_number',
             'price', 'time_period', 'vehicle_image', 'license_document',
-            'feedbacks', 'is_approved', 'is_available', 'created_at'
+            'feedbacks', 'is_approved', 'is_available', 'created_at',
+            'owner_id'  # ✅ Include in fields list
         ]
 
     def to_representation(self, instance):

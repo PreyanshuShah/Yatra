@@ -61,9 +61,19 @@ def login(request):
     username = request.data.get("username")
     password = request.data.get("password")
     user = authenticate(username=username, password=password)
+
     if user:
         tokens = get_tokens_for_user(user)
-        return Response({"message": "Login successful", "user": username, "tokens": tokens})
+        return Response({
+            "message": "Login successful",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            },
+            "tokens": tokens
+        })
+
     return Response({"error": "Invalid credentials"}, status=401)
 
 # Password Reset
@@ -97,6 +107,14 @@ def refresh_token(request):
 def protected_view(request):
     return Response({"message": f"Hello {request.user.username}, you are authenticated!"})
 
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+import re
+from .models import Vehicle
+from .serializers import VehicleSerializer
+from datetime import datetime
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_vehicle(request):
@@ -110,10 +128,42 @@ def add_vehicle(request):
     license_document = request.FILES.get("license_document")
     vehicle_image = request.FILES.get("vehicle_image")
 
+    # Validate phone number format (e.g., 1234567890 or +1234567890)
+    phone_pattern = r'^\+?[0-9]{10,15}$'
+    if not re.match(phone_pattern, phone_number):
+        return Response({"error": "Invalid phone number format."}, status=400)
+
+    # Validate price is a number
+    if price is None:
+        return Response({"error": "Price is required."}, status=400)
+    
+    try:
+        price = float(price)
+        if price <= 0:
+            raise ValueError
+    except ValueError:
+        return Response({"error": "Invalid price. Price must be a positive number."}, status=400)
+
+    # Validate time_period format (YYYY-MM-DD to YYYY-MM-DD)
+    try:
+        start_date_str, end_date_str = time_period.split(" to ")
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+        if start_date >= end_date:
+            raise ValueError
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid time period format. It must be 'YYYY-MM-DD to YYYY-MM-DD'."}, status=400)
+
+    # Check if all required fields are present
     if not model or not location or not address or not phone_number or not price or not time_period or not vehicle_image:
-        return Response({"error": "All fields are required"}, status=400)
+        return Response({"error": "All fields are required."}, status=400)
+
+    # Validate if files are uploaded (image and document)
+    if not vehicle_image or not license_document:
+        return Response({"error": "Both vehicle image and license document are required."}, status=400)
 
     try:
+        # Create vehicle instance
         vehicle = Vehicle.objects.create(
             user=user,
             model=model,
@@ -127,11 +177,17 @@ def add_vehicle(request):
             is_available=True,
             is_approved=False 
         )
+
+        # Serialize the vehicle data
         serializer = VehicleSerializer(vehicle)
+
+        # Return success response
         return Response({"message": "Vehicle added successfully!", "vehicle": serializer.data}, status=201)
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+
 
 
 @api_view(["GET"])
@@ -307,6 +363,8 @@ def user_transactions(request):
 from django.core.mail import send_mail
 from .models import Notification, Payment, Vehicle  
 
+from datetime import datetime
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def verify_khalti_epayment(request):
@@ -344,10 +402,26 @@ def verify_khalti_epayment(request):
 
             try:
                 vehicle = Vehicle.objects.get(id=vehicle_id)
+
+                # ✅ Prevent booking own vehicle
+                if vehicle.user == user:
+                    return Response({"error": "You cannot book your own vehicle."}, status=403)
+
+                # ✅ Calculate rental duration
+                try:
+                    start_date_str, end_date_str = vehicle.time_period.split(" to ")
+                    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+                    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+                    rental_days = (end_date - start_date).days + 1
+                    rental_period_display = f"{start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')}"
+                except Exception:
+                    rental_days = "N/A"
+                    rental_period_display = "Unknown"
+
             except Vehicle.DoesNotExist:
                 return Response({"error": "Vehicle not found"}, status=404)
 
-           
+            # ✅ Save Payment
             Payment.objects.create(
                 user=user,
                 vehicle=vehicle,
@@ -356,24 +430,31 @@ def verify_khalti_epayment(request):
                 mobile=data.get("mobile")
             )
 
-          
+            # ✅ Create Notification
             Notification.objects.create(
                 user=user,
                 message=f"Booking confirmed for vehicle: {vehicle.model}!"
             )
 
-           
+            # ✅ Send Email
             send_mail(
                 "✅ Booking Successful - Yatra App",
-                f"Dear {user.username},\n\nYour booking for '{vehicle.model}' has been successfully confirmed.\n\nAmount Paid: Rs. {int(data['total_amount']) / 100}\nTransaction ID: {transaction_id}\n\nThank you for using Yatra!",
+                f"Dear {user.username},\n\nYour booking for '{vehicle.model}' has been successfully confirmed.\n\n"
+                f"Rental Period: {rental_period_display} ({rental_days} day{'s' if rental_days != 1 else ''})\n"
+                f"Amount Paid: Rs. {int(data['total_amount']) / 100}\n"
+                f"Transaction ID: {transaction_id}\n\n"
+                "Thank you for using Yatra!",
                 settings.EMAIL_HOST_USER,
                 [user.email],
                 fail_silently=True,
             )
 
+            # ✅ Return API Response
             return Response({
-                "message": "✅ Payment verified successfully!",
-                "transaction_id": transaction_id
+                "message": f"✅ Payment verified successfully for {rental_days} day(s)!",
+                "transaction_id": transaction_id,
+                "rental_days": rental_days,
+                "rental_period": rental_period_display
             })
 
         return Response({
@@ -384,6 +465,7 @@ def verify_khalti_epayment(request):
     except Exception as e:
         print("❌ Exception during payment verification:", str(e))
         return Response({"error": f"Server error: {str(e)}"}, status=500)
+
 
 
 

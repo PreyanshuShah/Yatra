@@ -1,11 +1,11 @@
 buildscript {
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'  // Ensure you use AGP 8.2.1
+        classpath 'com.android.tools.build:gradle:8.3.0'  // ✅ Must match plugin version
     }
 }
 
 plugins {
-    id 'com.android.application' version '8.2.1' apply false
+    id 'com.android.application' version '8.3.0' apply false  // ✅ Must match classpath
     id 'kotlin-android' apply false
 }
 
