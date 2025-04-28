@@ -43,8 +43,8 @@ class Vehicle(models.Model):
     address = models.TextField()
     phone_number = models.CharField(max_length=15)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    time_period = models.CharField(max_length=50, default="")  # ✅ Prevents null issues
-    license_document = models.FileField(upload_to="documents/", blank=True, null=True)  # ✅ Optional field
+    time_period = models.CharField(max_length=50, default="")  
+    license_document = models.FileField(upload_to="documents/", blank=True)  # ✅ Optional field
     vehicle_image = models.ImageField(upload_to="vehicles/")
     created_at = models.DateTimeField(auto_now_add=True)
     is_available = models.BooleanField(default=True)

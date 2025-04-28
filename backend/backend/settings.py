@@ -19,7 +19,7 @@ ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [
-    # Default Django apps
+   
     'django.contrib.auth',
     'django.contrib.admin',
     'django.contrib.contenttypes',
@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'jazzmin',  
 
-    # Third-party apps
+
     'corsheaders',  
     'rest_framework',
     'rest_framework_simplejwt',  
@@ -36,8 +36,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',  
 
-    # Your custom apps
-    'user_auth',  # ✅ Your authentication app
+   
+    'user_auth',  
 ]
 
 SITE_ID = 1  # ✅ Required for Django authentication
@@ -52,10 +52,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',  # ✅ Add this for Django Allauth
+    'allauth.account.middleware.AccountMiddleware',  
 ]
 
-# ✅ CORS (Cross-Origin Requests) - Required for Flutter Web & Mobile
+
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS = ["*"]
@@ -99,37 +99,35 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'fyp',
         'USER': 'root',
-        'PASSWORD': 'root',  # Make sure this matches your MySQL password
+        'PASSWORD': 'root',
         'HOST': 'localhost',
         'PORT': '3307',
-       
     }
 }
 
 
-# ✅ Password Validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
 ]
 
-# ✅ Internationalization
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ✅ Static & Media Files
+
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
 
-# ✅ Default Auto Field
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ✅ Enable Email Backend for Password Reset
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
@@ -137,21 +135,21 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "preyanshushah@gmail.com"
 EMAIL_HOST_PASSWORD = "wenp wcqd ztdm ypxr"
 
-# ✅ Allow Large File Uploads for Vehicle Images & Documents
-DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # ✅ Allows files up to 5MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # ✅ Allows files up to 10MB
 
-# ✅ Django REST Framework Configuration with JWT Authentication
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',  # ✅ Allows unauthenticated access
+        'rest_framework.permissions.AllowAny', 
     ),
 }
 
-# ✅ JWT Token Security Configuration
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=3),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),

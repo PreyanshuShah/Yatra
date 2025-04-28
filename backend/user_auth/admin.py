@@ -7,7 +7,7 @@ from .models import Profile, Vehicle, Feedback, Notification, Payment
 from .admin_forms import NotificationForm
 from django.contrib.auth.models import User
 
-# Inline Feedback
+
 class FeedbackInline(admin.TabularInline):
     model = Feedback
     extra = 1
@@ -17,7 +17,7 @@ class CustomVehicleAdmin(admin.ModelAdmin):
     list_display = (
         'model', 'user', 'formatted_price', 'location', 'address',
         'phone_number', 'time_period', 'created_at', 'view_image',
-        'view_license', 'is_available', 'is_approved',  # ✅ show approval status
+        'view_license', 'is_available', 'is_approved',  
         'approve_button', 'send_notification_button', 'delete_button'
     )
     search_fields = ('model', 'user__username', 'location', 'address', 'phone_number', 'price')
@@ -110,7 +110,7 @@ class CustomVehicleAdmin(admin.ModelAdmin):
         self.message_user(request, f"✅ Vehicle '{vehicle.model}' approved!", level=messages.SUCCESS)
         return HttpResponseRedirect(reverse('admin:user_auth_vehicle_changelist'))
 
-# Feedback Admin
+
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
     list_display = ('user', 'vehicle', 'colored_rating', 'comment', 'created_at', 'delete_button')

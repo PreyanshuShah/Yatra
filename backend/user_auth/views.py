@@ -76,7 +76,7 @@ def login(request):
 
     return Response({"error": "Invalid credentials"}, status=401)
 
-# Password Reset
+
 @api_view(["POST"])
 def password_reset_request(request):
     email = request.data.get("email")
@@ -90,7 +90,7 @@ def password_reset_request(request):
     except User.DoesNotExist:
         return Response({"error": "User with this email not found"}, status=404)
 
-# Token Refresh
+
 @api_view(["POST"])
 def refresh_token(request):
     refresh = request.data.get("refresh")
@@ -128,12 +128,12 @@ def add_vehicle(request):
     license_document = request.FILES.get("license_document")
     vehicle_image = request.FILES.get("vehicle_image")
 
-    # Validate phone number format (e.g., 1234567890 or +1234567890)
+    
     phone_pattern = r'^\+?[0-9]{10,15}$'
     if not re.match(phone_pattern, phone_number):
         return Response({"error": "Invalid phone number format."}, status=400)
 
-    # Validate price is a number
+ 
     if price is None:
         return Response({"error": "Price is required."}, status=400)
     
@@ -144,7 +144,7 @@ def add_vehicle(request):
     except ValueError:
         return Response({"error": "Invalid price. Price must be a positive number."}, status=400)
 
-    # Validate time_period format (YYYY-MM-DD to YYYY-MM-DD)
+   
     try:
         start_date_str, end_date_str = time_period.split(" to ")
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
@@ -154,16 +154,16 @@ def add_vehicle(request):
     except (ValueError, TypeError):
         return Response({"error": "Invalid time period format. It must be 'YYYY-MM-DD to YYYY-MM-DD'."}, status=400)
 
-    # Check if all required fields are present
+  
     if not model or not location or not address or not phone_number or not price or not time_period or not vehicle_image:
         return Response({"error": "All fields are required."}, status=400)
 
-    # Validate if files are uploaded (image and document)
+ 
     if not vehicle_image or not license_document:
         return Response({"error": "Both vehicle image and license document are required."}, status=400)
 
     try:
-        # Create vehicle instance
+      
         vehicle = Vehicle.objects.create(
             user=user,
             model=model,
@@ -178,10 +178,10 @@ def add_vehicle(request):
             is_approved=False 
         )
 
-        # Serialize the vehicle data
+   
         serializer = VehicleSerializer(vehicle)
 
-        # Return success response
+
         return Response({"message": "Vehicle added successfully!", "vehicle": serializer.data}, status=201)
 
     except Exception as e:
@@ -430,13 +430,13 @@ def verify_khalti_epayment(request):
                 mobile=data.get("mobile")
             )
 
-            # ✅ Create Notification
+          
             Notification.objects.create(
                 user=user,
                 message=f"Booking confirmed for vehicle: {vehicle.model}!"
             )
 
-            # ✅ Send Email
+            
             send_mail(
                 "✅ Booking Successful - Yatra App",
                 f"Dear {user.username},\n\nYour booking for '{vehicle.model}' has been successfully confirmed.\n\n"
@@ -449,9 +449,9 @@ def verify_khalti_epayment(request):
                 fail_silently=True,
             )
 
-            # ✅ Return API Response
+           
             return Response({
-                "message": f"✅ Payment verified successfully for {rental_days} day(s)!",
+                "message": f"Payment verified successfully for {rental_days} day(s)!",
                 "transaction_id": transaction_id,
                 "rental_days": rental_days,
                 "rental_period": rental_period_display
@@ -608,7 +608,7 @@ def approve_vehicle(request, vehicle_id):
         # Optional: notify the user
         Notification.objects.create(
             user=vehicle.user,
-            message=f"✅ Your vehicle '{vehicle.model}' has been approved!"
+            message=f"Your vehicle '{vehicle.model}' has been approved!"
         )
 
         return Response({"message": "Vehicle approved successfully!"})
