@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
@@ -29,26 +31,29 @@ class _AddPageState extends State<AddPage> {
     'Kathmandu',
     'Pokhara',
     'Chitwan',
-    'Dharan'
+    'Dharan',
+    'Itahari',
+    'Biratnagar',
   ];
 
   bool _isLoading = false;
   int _selectedIndex = 1;
   DateTime? startDate, endDate;
 
-  // File Picker function to pick files (vehicle and license images)
   Future<void> _pickFile(bool isVehicle) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    FilePickerResult? result =
+        await FilePicker.platform.pickFiles(withData: true);
     if (result != null) {
       setState(() {
-        isVehicle
-            ? vehicleImage = result.files.first
-            : licenseImage = result.files.first;
+        if (isVehicle) {
+          vehicleImage = result.files.first;
+        } else {
+          licenseImage = result.files.first;
+        }
       });
     }
   }
 
-  // Date Range Picker for selecting rental period
   Future<void> _selectDateRange(BuildContext context) async {
     DateTime now = DateTime.now();
     final DateTimeRange? picked = await showDateRangePicker(
@@ -65,18 +70,15 @@ class _AddPageState extends State<AddPage> {
     }
   }
 
-  // Form submission function
   Future<void> _submitForm() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? accessToken = prefs.getString('access_token');
 
-    // Check if the user is logged in
     if (accessToken == null) {
       _showSnackbar('You must log in first!', Colors.redAccent);
       return;
     }
 
-    // Validate all required fields
     if (modelController.text.isEmpty ||
         selectedLocation == null ||
         addressController.text.isEmpty ||
@@ -84,9 +86,10 @@ class _AddPageState extends State<AddPage> {
         startDate == null ||
         endDate == null ||
         contactController.text.isEmpty ||
-        vehicleImage == null || // Check for vehicle image
-        licenseImage == null) {
-      // Check for license image
+        vehicleImage == null ||
+        licenseImage == null ||
+        vehicleImage?.bytes == null ||
+        licenseImage?.bytes == null) {
       _showSnackbar('All fields are required!', Colors.redAccent);
       return;
     }
@@ -94,45 +97,56 @@ class _AddPageState extends State<AddPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Ensure `startDate` and `endDate` are always valid
-      startDate ??= DateTime.now(); // Default to current date if null
-      endDate ??= DateTime.now(); // Default to current date if null
-
-      // Ensure selectedLocation is never null
-      selectedLocation ??= 'Kathmandu'; // Default to 'Kathmandu' if null
-
       String formattedTimePeriod =
           "${DateFormat('yyyy-MM-dd').format(startDate!)} to ${DateFormat('yyyy-MM-dd').format(endDate!)}";
 
+      print(
+          "Vehicle: ${vehicleImage?.name}, ${vehicleImage?.bytes?.length} bytes");
+      print(
+          "License: ${licenseImage?.name}, ${licenseImage?.bytes?.length} bytes");
+
       FormData formData = FormData.fromMap({
         'model': modelController.text.trim(),
-        'location':
-            selectedLocation!, // Force unwrap because we set a default value
+        'location': selectedLocation!,
         'address': addressController.text.trim(),
         'price': priceController.text.trim(),
         'time_period': formattedTimePeriod,
         'phone_number': contactController.text.trim(),
-        // Handle vehicle image and license image null checks
-        'vehicle_image': vehicleImage != null
-            ? MultipartFile.fromBytes(vehicleImage!.bytes!,
-                filename: vehicleImage!.name)
-            : null,
-        'license_document': licenseImage != null
-            ? MultipartFile.fromBytes(licenseImage!.bytes!,
-                filename: licenseImage!.name)
-            : null,
+        'vehicle_image': MultipartFile.fromBytes(
+          vehicleImage!.bytes!,
+          filename: vehicleImage!.name,
+        ),
+        'license_document': MultipartFile.fromBytes(
+          licenseImage!.bytes!,
+          filename: licenseImage!.name,
+        ),
       });
 
       var response = await Dio().post(
-        'http://127.0.0.1:8000/auth/add-vehicle/',
+        'http://192.168.100.134:8000/auth/add-vehicle/',
         data: formData,
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
 
-      // Handle the response
       if (response.statusCode == 201) {
-        _showSnackbar('Vehicle Added Successfully!', Colors.green);
-        Navigator.pop(context);
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Submission Received'),
+            content: const Text(
+              'Your vehicle listing has been submitted for review. It will be visible after admin approval.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       } else {
         _showSnackbar(
             'Failed to add vehicle: ${response.data}', Colors.redAccent);
@@ -144,13 +158,13 @@ class _AddPageState extends State<AddPage> {
     }
   }
 
-  // Function to show a Snackbar message
   void _showSnackbar(String message, Color color) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: color,
+    ));
   }
 
-  // Build the UI for the Add Vehicle page
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,7 +269,6 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  // Dropdown for location
   Widget _buildDropdownField(String label, String? value, List<String> items,
       ValueChanged<String?> onChanged) {
     return _buildCard(
@@ -274,7 +287,6 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  // Text fields for user input
   Widget _buildTextField(
       String label, TextEditingController controller, IconData icon) {
     return _buildCard(
@@ -288,7 +300,6 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  // Upload section for images and documents
   Widget _buildUploadSection(
       String label, IconData icon, String? fileName, VoidCallback onPressed) {
     return _buildCard(
@@ -301,7 +312,6 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  // Date range picker for start and end date
   Widget _buildDateRangePicker() {
     return GestureDetector(
       onTap: () => _selectDateRange(context),
@@ -325,7 +335,6 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  // Helper method to wrap widgets in a Card
   Widget _buildCard(Widget child) {
     return Card(
       elevation: 3,

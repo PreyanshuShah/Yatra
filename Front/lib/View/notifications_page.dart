@@ -1,6 +1,8 @@
+// ignore: file_names
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:front/helpers/notification_helper.dart';
@@ -9,7 +11,6 @@ class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
   @override
-
   _NotificationsPageState createState() => _NotificationsPageState();
 }
 
@@ -17,63 +18,108 @@ class _NotificationsPageState extends State<NotificationsPage> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
   final Set<int> _expandedNotifications = {};
+  Set<int> _shownNotificationIds = {};
+  Timer? _notificationTimer;
 
   @override
   void initState() {
     super.initState();
     NotificationHelper.initialize();
-    _fetchNotifications();
+    _loadShownIds().then((_) => _fetchNotifications());
+    _notificationTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _fetchNotifications();
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadShownIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    _shownNotificationIds =
+        prefs.getStringList('shown_notification_ids')?.map(int.parse).toSet() ??
+            {};
+  }
+
+  Future<void> _saveShownIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      'shown_notification_ids',
+      _shownNotificationIds.map((id) => id.toString()).toList(),
+    );
   }
 
   Future<void> _fetchNotifications() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null) return;
 
-    final response = await http.get(
-      Uri.parse('http://127.0.0.1:8000/auth/notifications/'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/auth/notifications/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
-    if (response.statusCode == 200) {
-      List<dynamic> notifications = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final notifications = json.decode(response.body) as List<dynamic>;
 
-      for (var notif in notifications) {
-        if (!notif['is_read']) {
-          await NotificationHelper.showNotification(
-            "📢 New Notification",
-            notif['message'],
-          );
-          break;
+        final newUnread = notifications.where((n) =>
+            n['is_read'] == false && !_shownNotificationIds.contains(n['id']));
+
+        for (var notif in newUnread) {
+          // schedule 5 repeats, 5s,10s,15s,20s,25s from now
+          for (int i = 1; i <= 5; i++) {
+            final fireTime = DateTime.now().add(Duration(seconds: 5 * i));
+            await NotificationHelper.scheduleNotification(
+              id: notif['id'] * 10 + i,
+              title: "📬 New Notification",
+              body: notif['message'],
+              scheduledDate: fireTime,
+            );
+          }
+          _shownNotificationIds.add(notif['id']);
         }
-      }
 
-      setState(() {
-        _notifications = notifications;
-        _isLoading = false;
-      });
-    } else {
+        await _saveShownIds();
+
+        if (!mounted) return;
+        setState(() {
+          _notifications = notifications;
+          _isLoading = false;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print("❌ Notification fetch error: $e");
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _markAsRead(int id) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    if (token == null) return;
+
     final response = await http.post(
       Uri.parse('http://127.0.0.1:8000/auth/notifications/read/$id/'),
       headers: {'Authorization': 'Bearer $token'},
     );
-
     if (response.statusCode != 200) {
-      debugPrint("❌ Failed to mark notification as read");
+      debugPrint("Failed to mark notification as read");
     }
   }
 
   String _formatDate(String dateTime) {
     try {
-      DateTime parsedDate = DateTime.parse(dateTime);
-      return DateFormat('yyyy-MM-dd HH:mm').format(parsedDate);
-    } catch (e) {
+      final parsed = DateTime.parse(dateTime);
+      return DateFormat('yyyy-MM-dd HH:mm').format(parsed);
+    } catch (_) {
       return dateTime;
     }
   }
@@ -82,8 +128,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Notifications',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.cyan,
         elevation: 5,
       ),
@@ -91,8 +139,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ? const Center(child: CircularProgressIndicator())
           : _notifications.isEmpty
               ? const Center(
-                  child: Text("📭 No notifications available.",
-                      style: TextStyle(fontSize: 18)))
+                  child: Text(
+                    "📭 No notifications available.",
+                    style: TextStyle(fontSize: 18),
+                  ),
+                )
               : RefreshIndicator(
                   onRefresh: _fetchNotifications,
                   child: ListView.builder(
@@ -100,9 +151,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     itemCount: _notifications.length,
                     itemBuilder: (context, index) {
                       final notification = _notifications[index];
-                      bool isExpanded =
-                          _expandedNotifications.contains(notification['id']);
-                      bool isRead = notification['is_read'];
+                      final id = notification['id'] as int;
+                      final isExpanded = _expandedNotifications.contains(id);
+                      final isRead = notification['is_read'] as bool;
 
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
@@ -133,8 +184,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                               subtitle: Text(
-                                  "📅 ${_formatDate(notification['created_at'])}",
-                                  style: TextStyle(color: Colors.grey[600])),
+                                "📅 ${_formatDate(notification['created_at'])}",
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
                               trailing: Icon(
                                 isExpanded
                                     ? Icons.expand_less
@@ -143,15 +195,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               ),
                               onTap: () async {
                                 setState(() {
-                                  isExpanded
-                                      ? _expandedNotifications
-                                          .remove(notification['id'])
-                                      : _expandedNotifications
-                                          .add(notification['id']);
+                                  if (isExpanded) {
+                                    _expandedNotifications.remove(id);
+                                  } else {
+                                    _expandedNotifications.add(id);
+                                  }
                                 });
-
                                 if (!isRead) {
-                                  await _markAsRead(notification['id']);
+                                  await _markAsRead(id);
                                   setState(() {
                                     notification['is_read'] = true;
                                   });

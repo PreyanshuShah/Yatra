@@ -13,6 +13,7 @@ class SignupPage extends StatefulWidget {
       {super.key, required this.onThemeChanged, required this.isDarkMode});
 
   @override
+  // ignore: library_private_types_in_public_api
   _SignupPageState createState() => _SignupPageState();
 }
 
@@ -35,7 +36,7 @@ class _SignupPageState extends State<SignupPage> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://127.0.0.1:8000/auth/register/'), // Your API URL
+          Uri.parse('http://127.0.0.1:8000/auth/register/'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'username': _usernameController.text.trim(),
@@ -50,6 +51,7 @@ class _SignupPageState extends State<SignupPage> {
           saveUserData(
               _usernameController.text.trim(), _emailController.text.trim());
 
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(responseData['message'] ?? '✅ Signup Successful!'),

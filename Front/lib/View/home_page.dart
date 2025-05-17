@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:front/View/BookingPage.dart';
+import 'package:front/helpers/notification_helper.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,7 +74,15 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadUsername();
     _fetchVehicles();
-    Timer.periodic(const Duration(seconds: 30), (timer) {
+
+    // 🔔 Show notification once when app starts (optional)
+    NotificationHelper.showNotification(
+      "Welcome to Yatra",
+      "Check out the latest vehicle listings!",
+    );
+
+    // 🔁 Refresh vehicle list every 20 seconds
+    Timer.periodic(const Duration(seconds: 20), (timer) {
       _fetchVehicles();
     });
   }
@@ -178,12 +187,23 @@ class _HomePageState extends State<HomePage> {
     try {
       final response = await http
           .get(Uri.parse('http://127.0.0.1:8000/auth/list-vehicles/'));
+
       if (response.statusCode == 200) {
         final List<dynamic> vehicleList = json.decode(response.body);
+        final fetchedVehicles =
+            vehicleList.map((data) => Vehicle.fromJson(data)).toList();
+
         setState(() {
-          _vehicles =
-              vehicleList.map((data) => Vehicle.fromJson(data)).toList();
+          _vehicles = fetchedVehicles;
         });
+
+        // 🔔 Trigger notification if new vehicles exist
+        if (fetchedVehicles.isNotEmpty) {
+          NotificationHelper.showNotification(
+            "New Vehicles Available",
+            "Check out ${fetchedVehicles.length} available vehicles now!",
+          );
+        }
       } else {
         throw Exception('Failed to load vehicles');
       }

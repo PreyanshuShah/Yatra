@@ -43,15 +43,17 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
-    <!-- ✅ Notification Permissions -->
+    <!-- ✅ Local Notification Support -->
     <key>UIBackgroundModes</key>
     <array>
-        <string>remote-notification</string>
+        <string>fetch</string>
+        <string>local-notification</string>
     </array>
-    <key>FirebaseAppDelegateProxyEnabled</key>
-    <false/>
-    <key>NSUserTrackingUsageDescription</key>
-    <string>This identifier will be used to deliver notifications to your device.</string>
+
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>This app uses local notifications to alert you about bookings.</string>
+
+    <!-- ✅ Location Permissions -->
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>We use your location to suggest nearby vehicles.</string>
     <key>NSLocationAlwaysUsageDescription</key>
@@ -62,15 +64,17 @@
     <!-- ✅ Camera & Photo Library Permissions -->
     <key>NSCameraUsageDescription</key>
     <string>We need access to your camera to upload vehicle images.</string>
-    
     <key>NSPhotoLibraryUsageDescription</key>
     <string>We need access to your photo library to select a vehicle image.</string>
 
+    <!-- ✅ Network Settings -->
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+
+    <!-- Optional optimizations -->
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>

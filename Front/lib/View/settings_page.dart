@@ -6,6 +6,7 @@ import 'notifications_page.dart';
 import 'terms_conditions_page.dart';
 import 'home_page.dart';
 import 'add_page.dart';
+import 'booking_history_page.dart';
 
 class SettingsPage extends StatefulWidget {
   final Function(bool) onThemeChanged;
@@ -30,13 +31,6 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _isDarkMode = prefs.getBool('isDarkMode') ?? false;
     });
-  }
-
-  void _toggleDarkMode(bool value) {
-    setState(() {
-      _isDarkMode = value;
-    });
-    widget.onThemeChanged(value);
   }
 
   @override
@@ -85,8 +79,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       onTap: () =>
                           _navigateTo(context, const TermsConditionsPage()),
                     ),
+                    _buildSettingsOption(
+                      title: "My Bookings",
+                      icon: Icons.history,
+                      onTap: () =>
+                          _navigateTo(context, const BookingHistoryPage()),
+                    ),
 
-                    // Dark Mode Toggle
                   ],
                 ),
               ),
@@ -95,12 +94,11 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
 
-      // Bottom Navigation Bar
       bottomNavigationBar: _buildBottomNavigationBar(context),
     );
   }
 
-  // ✅ Custom AppBar
+
   Widget _buildAppBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -124,7 +122,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ✅ Custom Card UI for Each Settings Option
+ 
   Widget _buildSettingsOption({
     required String title,
     required IconData icon,
@@ -143,7 +141,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ✅ Bottom Navigation Bar
+  
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
       backgroundColor: Colors.white,
@@ -170,7 +168,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ✅ Navigation Helper Function
+
   void _navigateTo(BuildContext context, Widget page) {
     Navigator.push(
       context,

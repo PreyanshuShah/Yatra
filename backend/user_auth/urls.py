@@ -1,14 +1,14 @@
 
 from django.urls import path
 
-from .views import approve_vehicle, delete_vehicle, khalti_payment_success, list_pending_vehicles, mark_vehicle_unavailable, update_vehicle
+from .views import approve_vehicle, delete_vehicle, khalti_payment_success, list_pending_vehicles, mark_vehicle_unavailable, update_vehicle, my_bookings
 
 from .views import (
     register, login, refresh_token, protected_view, password_reset_request,
     add_vehicle, list_vehicles, user_profile, user_transactions, user_vehicles,
     VehicleListView, VehicleDetailView, add_feedback, list_feedback, my_vehicles_feedbacks,
     send_notification, get_notifications, mark_notification_as_read,
-    change_password, verify_khalti_epayment,  # ✅ Just once!
+    change_password, verify_khalti_epayment, check_availability
 )
 
 urlpatterns = [
@@ -53,5 +53,12 @@ urlpatterns = [
     path("admin/pending-vehicles/", list_pending_vehicles, name="pending_vehicles"),
     path("admin/approve-vehicle/<int:vehicle_id>/", approve_vehicle, name="approve_vehicle"),
 
+
+    path("bookings/my/", my_bookings, name="my_bookings"),  
+    path("check-availability/", check_availability, name="check_availability"),
+
+
 ]
-   
+
+
+

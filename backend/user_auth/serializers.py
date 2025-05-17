@@ -19,7 +19,7 @@ class VehicleSerializer(serializers.ModelSerializer):
 
     owner_id = serializers.IntegerField(source='user.id', read_only=True)
     is_approved = serializers.BooleanField(read_only=True)
-    is_available = serializers.BooleanField(read_only=True)
+   
     created_at = serializers.DateTimeField(read_only=True)
     owner_id = serializers.IntegerField(source='user.id', read_only=True)
 

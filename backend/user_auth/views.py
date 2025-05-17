@@ -7,13 +7,13 @@ from django.utils.encoding import force_bytes
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework_simplejwt.tokens import RefreshToken # type: ignore
+from rest_framework_simplejwt.tokens import RefreshToken 
 from rest_framework import generics, permissions
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 
-import requests # type: ignore
+import requests #
 import json
 import random
 import string
@@ -128,15 +128,14 @@ def add_vehicle(request):
     license_document = request.FILES.get("license_document")
     vehicle_image = request.FILES.get("vehicle_image")
 
-    
+    #
     phone_pattern = r'^\+?[0-9]{10,15}$'
     if not re.match(phone_pattern, phone_number):
         return Response({"error": "Invalid phone number format."}, status=400)
 
- 
+  
     if price is None:
         return Response({"error": "Price is required."}, status=400)
-    
     try:
         price = float(price)
         if price <= 0:
@@ -144,7 +143,6 @@ def add_vehicle(request):
     except ValueError:
         return Response({"error": "Invalid price. Price must be a positive number."}, status=400)
 
-   
     try:
         start_date_str, end_date_str = time_period.split(" to ")
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
@@ -154,16 +152,12 @@ def add_vehicle(request):
     except (ValueError, TypeError):
         return Response({"error": "Invalid time period format. It must be 'YYYY-MM-DD to YYYY-MM-DD'."}, status=400)
 
-  
-    if not model or not location or not address or not phone_number or not price or not time_period or not vehicle_image:
-        return Response({"error": "All fields are required."}, status=400)
 
- 
-    if not vehicle_image or not license_document:
-        return Response({"error": "Both vehicle image and license document are required."}, status=400)
+    if not all([model, location, address, phone_number, price, time_period, vehicle_image, license_document]):
+        return Response({"error": "All fields including image and license document are required."}, status=400)
 
     try:
-      
+     
         vehicle = Vehicle.objects.create(
             user=user,
             model=model,
@@ -175,14 +169,14 @@ def add_vehicle(request):
             license_document=license_document,
             vehicle_image=vehicle_image,
             is_available=True,
-            is_approved=False 
+            is_approved=False
         )
 
-   
         serializer = VehicleSerializer(vehicle)
-
-
-        return Response({"message": "Vehicle added successfully!", "vehicle": serializer.data}, status=201)
+        return Response({
+            "message": "Your vehicle listing has been submitted for review. It will be visible after admin approval.",
+            "vehicle": serializer.data
+        }, status=201)
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
@@ -193,7 +187,7 @@ def add_vehicle(request):
 @api_view(["GET"])
 def list_vehicles(request):
 
-    vehicles = Vehicle.objects.filter(is_available=True, is_approved=True)
+    vehicles = Vehicle.objects.filter( is_approved=True)
     serializer = VehicleSerializer(vehicles, many=True, context={'request': request})
     return Response(serializer.data)
 
@@ -349,6 +343,7 @@ def user_transactions(request):
     transactions = Payment.objects.filter(user=request.user).order_by("-paid_at")
     data = [
         {
+            "vehicle_id": t.vehicle.id,
             "vehicle": t.vehicle.model,
             "amount": t.amount / 100,
             "transaction_id": t.transaction_id,
@@ -362,8 +357,13 @@ def user_transactions(request):
 
 from django.core.mail import send_mail
 from .models import Notification, Payment, Vehicle  
-
 from datetime import datetime
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+import requests
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -372,101 +372,84 @@ def verify_khalti_epayment(request):
         user = request.user
         pidx = request.data.get("pidx")
         vehicle_id = request.data.get("vehicle_id")
+        start_date_str = request.data.get("start_date")
+        end_date_str = request.data.get("end_date")
 
-        print("📥 Incoming payment verification request")
-        print("➡️ User:", user.username)
-        print("➡️ pidx:", pidx)
-        print("➡️ vehicle_id:", vehicle_id)
+       
 
-        if not pidx or not vehicle_id:
-            return Response({"error": "Missing pidx or vehicle_id"}, status=400)
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
 
+        # ✅ Prevent self-booking
+        if vehicle.user == user:
+            return Response({"error": "You cannot book your own vehicle."}, status=403)
+
+        # ✅ Parse and validate rental period
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            rental_days = (end_date - start_date).days + 1
+            if rental_days <= 0:
+                return Response({"error": "Invalid rental period"}, status=400)
+            if hasattr(vehicle, "max_days") and rental_days > vehicle.max_days:
+                return Response({"error": f"You can only book for up to {vehicle.max_days} days."}, status=400)
+            rental_period_display = f"{start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')}"
+        except Exception:
+            return Response({"error": "Invalid rental date format. please select only avilavle days"}, status=400)
+
+        # 🔐 Verify Khalti payment
         url = "https://a.khalti.com/api/v2/epayment/lookup/"
         headers = {"Authorization": f"Key {settings.KHALTI_SECRET_KEY}"}
         payload = {"pidx": pidx}
 
         response = requests.post(url, headers=headers, json=payload)
-        print("📦 Khalti Response Status:", response.status_code)
-        print("📦 Khalti Response:", response.text)
+        if response.status_code != 200:
+            return Response({"error": "Khalti verification failed", "response": response.text}, status=response.status_code)
 
-        if response.status_code == 200:
-            data = response.json()
+        data = response.json()
+        if data.get("status") != "Completed":
+            return Response({"error": "Payment not completed", "status": data.get("status")}, status=400)
 
-            if data.get("status") != "Completed":
-                return Response({"error": "Payment not completed", "status": data.get("status")}, status=400)
+        transaction_id = data.get("transaction_id") or data.get("idx") or pidx
+        if Payment.objects.filter(transaction_id=transaction_id).exists():
+            return Response({"error": "Duplicate transaction"}, status=400)
 
-            transaction_id = data.get("transaction_id") or data.get("idx") or pidx
+        # 💾 Save payment
+        Payment.objects.create(
+            user=user,
+            vehicle=vehicle,
+            amount=data["total_amount"],
+            transaction_id=transaction_id,
+            mobile=data.get("mobile"),
+        )
 
-            if Payment.objects.filter(transaction_id=transaction_id).exists():
-                return Response({"error": "Duplicate transaction"}, status=400)
+        # 🔔 Notify user
+        Notification.objects.create(
+            user=user,
+            message=f"Booking confirmed for vehicle: {vehicle.model}!"
+        )
 
-            try:
-                vehicle = Vehicle.objects.get(id=vehicle_id)
-
-                # ✅ Prevent booking own vehicle
-                if vehicle.user == user:
-                    return Response({"error": "You cannot book your own vehicle."}, status=403)
-
-                # ✅ Calculate rental duration
-                try:
-                    start_date_str, end_date_str = vehicle.time_period.split(" to ")
-                    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-                    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-                    rental_days = (end_date - start_date).days + 1
-                    rental_period_display = f"{start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')}"
-                except Exception:
-                    rental_days = "N/A"
-                    rental_period_display = "Unknown"
-
-            except Vehicle.DoesNotExist:
-                return Response({"error": "Vehicle not found"}, status=404)
-
-            # ✅ Save Payment
-            Payment.objects.create(
-                user=user,
-                vehicle=vehicle,
-                amount=data["total_amount"],
-                transaction_id=transaction_id,
-                mobile=data.get("mobile")
-            )
-
-          
-            Notification.objects.create(
-                user=user,
-                message=f"Booking confirmed for vehicle: {vehicle.model}!"
-            )
-
-            
-            send_mail(
-                "✅ Booking Successful - Yatra App",
-                f"Dear {user.username},\n\nYour booking for '{vehicle.model}' has been successfully confirmed.\n\n"
-                f"Rental Period: {rental_period_display} ({rental_days} day{'s' if rental_days != 1 else ''})\n"
-                f"Amount Paid: Rs. {int(data['total_amount']) / 100}\n"
-                f"Transaction ID: {transaction_id}\n\n"
-                "Thank you for using Yatra!",
-                settings.EMAIL_HOST_USER,
-                [user.email],
-                fail_silently=True,
-            )
-
-           
-            return Response({
-                "message": f"Payment verified successfully for {rental_days} day(s)!",
-                "transaction_id": transaction_id,
-                "rental_days": rental_days,
-                "rental_period": rental_period_display
-            })
+        # 📧 Email
+        send_mail(
+            "✅ Booking Successful - Yatra App",
+            f"Dear {user.username},\n\nYour booking for '{vehicle.model}' is confirmed.\n\n"
+            f"Rental Period: {rental_period_display} ({rental_days} days)\n"
+            f"Amount Paid: Rs. {int(data['total_amount']) / 100}\n"
+            f"Transaction ID: {transaction_id}\n\n"
+            "Thank you for using Yatra!",
+            settings.EMAIL_HOST_USER,
+            [user.email],
+            fail_silently=True,
+        )
 
         return Response({
-            "error": "Khalti verification failed",
-            "response": response.text
-        }, status=response.status_code)
+            "message": f"Payment verified successfully for {rental_days} day(s)!",
+            "transaction_id": transaction_id,
+            "rental_days": rental_days,
+            "rental_period": rental_period_display
+        })
 
     except Exception as e:
-        print("❌ Exception during payment verification:", str(e))
         return Response({"error": f"Server error: {str(e)}"}, status=500)
-
-
 
 
 from django.http import HttpResponse
@@ -622,4 +605,74 @@ def list_pending_vehicles(request):
     vehicles = Vehicle.objects.filter(is_approved=False)
     serializer = VehicleSerializer(vehicles, many=True, context={'request': request})
     return Response(serializer.data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_bookings(request):
+    bookings = Payment.objects.filter(user=request.user).select_related('vehicle').order_by("-paid_at")
+    data = [
+        {
+            "vehicle_model": b.vehicle.model,
+            "vehicle_image": request.build_absolute_uri(b.vehicle.vehicle_image.url) if b.vehicle.vehicle_image else None,
+            "location": b.vehicle.location,
+            "address": b.vehicle.address,
+            "amount_paid": b.amount / 100,
+            "transaction_id": b.transaction_id,
+            "paid_at": b.paid_at.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        for b in bookings
+    ]
+    return Response(data)
+
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from datetime import datetime
+from .models import Vehicle
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def check_availability(request):
+    """
+    Returns {"available": true} if:
+      - The requested start/end are within vehicle.time_period
+      - The vehicle is still marked available (not already rented)
+    Otherwise returns {"available": false, "error": "..."}.
+    """
+    vehicle_id     = request.data.get("vehicle_id")
+    start_str      = request.data.get("start_date")
+    end_str        = request.data.get("end_date")
+
+    if not all([vehicle_id, start_str, end_str]):
+        return Response({"available": False, "error": "Missing fields"}, status=400)
+
+    vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+
+    # Parse vehicle availability window
+    try:
+        avail_start_str, avail_end_str = vehicle.time_period.split(" to ")
+        avail_start = datetime.strptime(avail_start_str, "%Y-%m-%d").date()
+        avail_end   = datetime.strptime(avail_end_str,   "%Y-%m-%d").date()
+
+        req_start   = datetime.strptime(start_str, "%Y-%m-%d").date()
+        req_end     = datetime.strptime(end_str,   "%Y-%m-%d").date()
+    except Exception:
+        return Response({"available": False, "error": "Invalid date format"}, status=400)
+
+    # Check within original availability window
+    if req_start < avail_start or req_end > avail_end:
+        return Response({
+            "available": False,
+            "error": "Requested dates outside vehicle's available period"
+        }, status=200)
+
+    # Check if vehicle has been marked unavailable (e.g. already booked)
+    if hasattr(vehicle, "available") and not vehicle.available:
+        return Response({
+            "available": False,
+            "error": "Vehicle is no longer available"
+        }, status=200)
+
+    return Response({"available": True}, status=200)
 

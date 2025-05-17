@@ -214,10 +214,81 @@ class _BookingPageState extends State<BookingPage> {
       );
 
   Widget _confirmBookingButton(double totalPrice) => ElevatedButton.icon(
-        onPressed: () => _bookVehicle(totalPrice),
+        onPressed: () async {
+          // 1️⃣ Ensure dates are selected and valid
+          if (startDate == null ||
+              endDate == null ||
+              rentalDays <= 0 ||
+              rentalDays > maxDays) {
+            Flushbar(
+              margin: const EdgeInsets.all(10),
+              borderRadius: BorderRadius.circular(12),
+              backgroundColor: Colors.redAccent,
+              flushbarPosition: FlushbarPosition.TOP,
+              icon: const Icon(Icons.error, color: Colors.white),
+              message: rentalDays <= 0 || rentalDays > maxDays
+                  ? "❌ Rental period must be between 1 and $maxDays days."
+                  : "❌ Please select rental dates!",
+              duration: const Duration(seconds: 3),
+            ).show(context);
+            return;
+          }
+
+          setState(() => _isBooking = true);
+
+          // 2️⃣ Check availability via your backend
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          String? token = prefs.getString("access_token");
+          final availResponse = await http.post(
+            Uri.parse("http://127.0.0.1:8000/auth/check-availability/"),
+            headers: {
+              "Authorization": "Bearer $token",
+              "Content-Type": "application/json",
+            },
+            body: jsonEncode({
+              "vehicle_id": widget.vehicle.id,
+              "start_date": DateFormat('yyyy-MM-dd').format(startDate!),
+              "end_date": DateFormat('yyyy-MM-dd').format(endDate!),
+            }),
+          );
+
+          if (availResponse.statusCode != 200) {
+            Flushbar(
+              margin: const EdgeInsets.all(10),
+              borderRadius: BorderRadius.circular(12),
+              backgroundColor: Colors.redAccent,
+              flushbarPosition: FlushbarPosition.TOP,
+              icon: const Icon(Icons.error_outline, color: Colors.white),
+              message: "❌ Availability check failed. Try again.",
+              duration: const Duration(seconds: 3),
+            ).show(context);
+            setState(() => _isBooking = false);
+            return;
+          }
+
+          final availData = jsonDecode(availResponse.body);
+          if (availData["available"] != true) {
+            Flushbar(
+              margin: const EdgeInsets.all(10),
+              borderRadius: BorderRadius.circular(12),
+              backgroundColor: Colors.redAccent,
+              flushbarPosition: FlushbarPosition.TOP,
+              icon: const Icon(Icons.block, color: Colors.white),
+              message: "Selected dates are unavailable.",
+              duration: const Duration(seconds: 3),
+            ).show(context);
+            setState(() => _isBooking = false);
+            return;
+          }
+
+          // 3️⃣ Proceed with payment & booking
+          await _bookVehicle(totalPrice);
+        },
         icon: const Icon(Icons.check, size: 20),
-        label: const Text("Confirm Booking",
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        label: const Text(
+          "Confirm Booking",
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
           foregroundColor: Colors.white,
@@ -229,31 +300,31 @@ class _BookingPageState extends State<BookingPage> {
       );
 
   Future<void> _selectDateRange() async {
-    DateTime maxAllowedEndDate = now.add(Duration(days: maxDays - 1));
+    // allow up to 1 year in the calendar
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
       firstDate: now,
-      lastDate: maxAllowedEndDate,
+      lastDate: now.add(const Duration(days: 365)),
     );
+
     if (picked != null) {
-      final difference = picked.end.difference(picked.start).inDays + 1;
-      if (difference > maxDays) {
-        showDialog(
-          // ignore: use_build_context_synchronously
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Booking Limit Exceeded"),
-            content: Text("❌ You can only book for up to $maxDays days."),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
+      final int difference = picked.end.difference(picked.start).inDays + 1;
+
+      if (difference <= 0 || difference > maxDays) {
+        // now this will fire when they pick too many days
+        Flushbar(
+          margin: const EdgeInsets.all(10),
+          borderRadius: BorderRadius.circular(12),
+          backgroundColor: Colors.redAccent,
+          flushbarPosition: FlushbarPosition.TOP,
+          icon: const Icon(Icons.error, color: Colors.white),
+          message: "❌ You can only book for up to $maxDays days.",
+          duration: const Duration(seconds: 3),
+        ).show(context);
         return;
       }
+
+      // valid: store selection
       setState(() {
         startDate = picked.start;
         endDate = picked.end;
@@ -264,7 +335,28 @@ class _BookingPageState extends State<BookingPage> {
 
   Future<void> _bookVehicle(double totalPrice) async {
     if (startDate == null || endDate == null) {
-      _showMessage("❌ Please select rental dates!", Colors.red);
+      Flushbar(
+        margin: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(12),
+        backgroundColor: Colors.redAccent,
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.calendar_today, color: Colors.white),
+        message: "❌ Please select rental dates!",
+        duration: const Duration(seconds: 3),
+      ).show(context);
+      return;
+    }
+
+    if (rentalDays <= 0 || rentalDays > maxDays) {
+      Flushbar(
+        margin: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(12),
+        backgroundColor: Colors.redAccent,
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.error, color: Colors.white),
+        message: "❌ Rental period must be between 1 and $maxDays days.",
+        duration: const Duration(seconds: 3),
+      ).show(context);
       return;
     }
 
@@ -272,16 +364,22 @@ class _BookingPageState extends State<BookingPage> {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("access_token");
-    int? userId = prefs.getInt("user_id"); // ✅ Grab logged-in user's ID
+    int? userId = prefs.getInt("user_id");
 
-    // 🔐 Validate login
     if (token == null || userId == null) {
-      _showMessage("❌ Authentication Error! Please log in again.", Colors.red);
+      Flushbar(
+        margin: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(12),
+        backgroundColor: Colors.redAccent,
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.lock, color: Colors.white),
+        message: "❌ Authentication Error! Please log in again.",
+        duration: const Duration(seconds: 3),
+      ).show(context);
       setState(() => _isBooking = false);
       return;
     }
 
-    // ❌ Prevent self-booking
     if (userId == widget.vehicle.ownerId) {
       Flushbar(
         margin: const EdgeInsets.all(10),
@@ -289,12 +387,9 @@ class _BookingPageState extends State<BookingPage> {
         backgroundColor: Colors.redAccent,
         flushbarPosition: FlushbarPosition.TOP,
         icon: const Icon(Icons.block, color: Colors.white),
-        message: "You cannot book your own vehicle.",
+        message: "❌ You cannot book your own vehicle.",
         duration: const Duration(seconds: 3),
-        animationDuration: const Duration(milliseconds: 500),
-        forwardAnimationCurve: Curves.easeInOut,
       ).show(context);
-
       setState(() => _isBooking = false);
       return;
     }
@@ -330,14 +425,22 @@ class _BookingPageState extends State<BookingPage> {
           await launchUrl(Uri.parse(paymentUrl),
               mode: LaunchMode.externalApplication);
 
-          _showMessage(
-              "🔁 Please return and tap Verify Payment", Colors.orange);
+          Flushbar(
+            margin: const EdgeInsets.all(10),
+            borderRadius: BorderRadius.circular(12),
+            backgroundColor: Colors.orange.shade700,
+            flushbarPosition: FlushbarPosition.TOP,
+            icon: const Icon(Icons.hourglass_top, color: Colors.white),
+            message: "🔁 Please return and tap Verify Payment",
+            duration: const Duration(seconds: 3),
+          ).show(context);
 
           showDialog(
             context: context,
             barrierDismissible: false,
             builder: (_) => AlertDialog(
-              title: const Text("Thank you for your payment!"),
+              title:
+                  const Text("This is final verification check for booking!"),
               content: const Text("We are always there to assist you."),
               actions: [
                 TextButton(
@@ -352,14 +455,38 @@ class _BookingPageState extends State<BookingPage> {
             ),
           );
         } else {
-          _showMessage("❌ Could not open payment page.", Colors.red);
+          Flushbar(
+            margin: const EdgeInsets.all(10),
+            borderRadius: BorderRadius.circular(12),
+            backgroundColor: Colors.redAccent,
+            flushbarPosition: FlushbarPosition.TOP,
+            icon: const Icon(Icons.error_outline, color: Colors.white),
+            message: "❌ Could not open payment page.",
+            duration: const Duration(seconds: 3),
+          ).show(context);
         }
       } else {
-        _showMessage("❌ Failed to initiate payment", Colors.red);
+        Flushbar(
+          margin: const EdgeInsets.all(10),
+          borderRadius: BorderRadius.circular(12),
+          backgroundColor: Colors.redAccent,
+          flushbarPosition: FlushbarPosition.TOP,
+          icon: const Icon(Icons.error_outline, color: Colors.white),
+          message: "❌ Failed to initiate payment.",
+          duration: const Duration(seconds: 3),
+        ).show(context);
       }
     } catch (e) {
       print('❌ Exception: $e');
-      _showMessage("❌ Error occurred during payment", Colors.red);
+      Flushbar(
+        margin: const EdgeInsets.all(10),
+        borderRadius: BorderRadius.circular(12),
+        backgroundColor: Colors.redAccent,
+        flushbarPosition: FlushbarPosition.TOP,
+        icon: const Icon(Icons.bug_report, color: Colors.white),
+        message: "❌ Error occurred during payment.",
+        duration: const Duration(seconds: 3),
+      ).show(context);
     } finally {
       setState(() => _isBooking = false);
     }
