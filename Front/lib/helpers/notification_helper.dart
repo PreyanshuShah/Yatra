@@ -2,6 +2,7 @@
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+// ignore: depend_on_referenced_packages
 import 'package:timezone/data/latest_all.dart' as tz_data;
 
 class NotificationHelper {
@@ -66,7 +67,7 @@ class NotificationHelper {
     required String body,
     required DateTime scheduledDate,
   }) async {
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'yatra_channel',
       'Yatra Notifications',
       importance: Importance.max,

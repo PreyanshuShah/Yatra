@@ -398,7 +398,7 @@ class _HomePageState extends State<HomePage> {
                     _buildDetailRow(Icons.directions_car, vehicle.model),
                     _buildDetailRow(Icons.location_on, vehicle.location),
                     _buildDetailRow(Icons.home, vehicle.address),
-                    _buildDetailRow(Icons.attach_money, vehicle.price),
+                    _buildDetailRow(Icons.currency_rupee, vehicle.price),
                     _buildDetailRow(
                         Icons.access_time,
                         vehicle.timePeriod.contains("to")

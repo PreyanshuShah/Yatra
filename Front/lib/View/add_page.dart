@@ -123,7 +123,7 @@ class _AddPageState extends State<AddPage> {
       });
 
       var response = await Dio().post(
-        'http://192.168.100.134:8000/auth/add-vehicle/',
+        'http://192.168.42.151:8000/auth/add-vehicle/',
         data: formData,
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
@@ -197,7 +197,8 @@ class _AddPageState extends State<AddPage> {
                     predefinedLocations,
                     (value) => setState(() => selectedLocation = value)),
                 _buildTextField('Address', addressController, Icons.home),
-                _buildTextField('Rental Price', priceController, Icons.money),
+                _buildTextField(
+                    'Rental Price', priceController, Icons.currency_rupee),
                 _buildDateRangePicker(),
                 _buildTextField('Phone Number', contactController, Icons.phone),
                 _buildUploadSection('Upload Vehicle Image', Icons.camera_alt,

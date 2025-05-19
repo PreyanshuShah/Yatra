@@ -104,7 +104,7 @@ class CustomVehicleAdmin(admin.ModelAdmin):
 
         Notification.objects.create(
             user=vehicle.user,
-            message=f"✅ Your vehicle '{vehicle.model}' has been approved and is now live!"
+            message=f"Your vehicle '{vehicle.model}' has been approved and is now live!"
         )
 
         self.message_user(request, f"✅ Vehicle '{vehicle.model}' approved!", level=messages.SUCCESS)

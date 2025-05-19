@@ -11,7 +11,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, permissions
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-
+from django.core.mail import send_mail
+from .models import Notification, Payment, Vehicle  
+from datetime import datetime
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+import requests
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 import requests #
 import json
@@ -355,15 +363,18 @@ def user_transactions(request):
     return Response({"transactions": data})
 
 
-from django.core.mail import send_mail
-from .models import Notification, Payment, Vehicle  
-from datetime import datetime
+
+
+
+from django.core.mail import EmailMultiAlternatives
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from .models import Notification, Payment, Vehicle
 import requests
 from django.conf import settings
-from django.shortcuts import get_object_or_404
+from datetime import datetime
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -372,48 +383,40 @@ def verify_khalti_epayment(request):
         user = request.user
         pidx = request.data.get("pidx")
         vehicle_id = request.data.get("vehicle_id")
-        start_date_str = request.data.get("start_date")
-        end_date_str = request.data.get("end_date")
 
-       
+        if not pidx or not vehicle_id:
+            return Response({"error": "Missing pidx or vehicle_id"}, status=400)
 
         vehicle = get_object_or_404(Vehicle, id=vehicle_id)
 
-        # ✅ Prevent self-booking
+        # Prevent booking own vehicle
         if vehicle.user == user:
             return Response({"error": "You cannot book your own vehicle."}, status=403)
 
-        # ✅ Parse and validate rental period
-        try:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-            rental_days = (end_date - start_date).days + 1
-            if rental_days <= 0:
-                return Response({"error": "Invalid rental period"}, status=400)
-            if hasattr(vehicle, "max_days") and rental_days > vehicle.max_days:
-                return Response({"error": f"You can only book for up to {vehicle.max_days} days."}, status=400)
-            rental_period_display = f"{start_date.strftime('%b %d, %Y')} to {end_date.strftime('%b %d, %Y')}"
-        except Exception:
-            return Response({"error": "Invalid rental date format. please select only avilavle days"}, status=400)
-
-        # 🔐 Verify Khalti payment
+        # Verify Khalti payment
         url = "https://a.khalti.com/api/v2/epayment/lookup/"
         headers = {"Authorization": f"Key {settings.KHALTI_SECRET_KEY}"}
         payload = {"pidx": pidx}
 
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code != 200:
-            return Response({"error": "Khalti verification failed", "response": response.text}, status=response.status_code)
+        resp = requests.post(url, headers=headers, json=payload)
+        if resp.status_code != 200:
+            return Response(
+                {"error": "Khalti verification failed", "response": resp.text},
+                status=resp.status_code,
+            )
 
-        data = response.json()
+        data = resp.json()
         if data.get("status") != "Completed":
-            return Response({"error": "Payment not completed", "status": data.get("status")}, status=400)
+            return Response(
+                {"error": "Payment not completed", "status": data.get("status")},
+                status=400,
+            )
 
         transaction_id = data.get("transaction_id") or data.get("idx") or pidx
         if Payment.objects.filter(transaction_id=transaction_id).exists():
             return Response({"error": "Duplicate transaction"}, status=400)
 
-        # 💾 Save payment
+        # Save payment
         Payment.objects.create(
             user=user,
             vehicle=vehicle,
@@ -422,30 +425,76 @@ def verify_khalti_epayment(request):
             mobile=data.get("mobile"),
         )
 
-        # 🔔 Notify user
+        # Create in-app notification
         Notification.objects.create(
             user=user,
             message=f"Booking confirmed for vehicle: {vehicle.model}!"
         )
 
-        # 📧 Email
-        send_mail(
-            "✅ Booking Successful - Yatra App",
-            f"Dear {user.username},\n\nYour booking for '{vehicle.model}' is confirmed.\n\n"
-            f"Rental Period: {rental_period_display} ({rental_days} days)\n"
-            f"Amount Paid: Rs. {int(data['total_amount']) / 100}\n"
+        # Prepare email content
+        year = datetime.now().year
+        subject = "✅ Booking Confirmed! Yatra Trip Details Inside 🚗🎉"
+        text_content = (
+            f"Dear {user.username},\n\n"
+            f"Your booking for '{vehicle.model}' is confirmed!\n\n"
+            f"Amount Paid: Rs. {int(data['total_amount'])/100}\n"
             f"Transaction ID: {transaction_id}\n\n"
-            "Thank you for using Yatra!",
+            "Thank you for choosing Yatra!"
+        )
+        html_content = f"""
+        <html>
+          <body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:20px;">
+            <div style="max-width:600px;margin:auto;background:#fff;border-radius:8px;
+                        box-shadow:0 2px 5px rgba(0,0,0,0.1);overflow:hidden;">
+              <div style="background:#00ACC1;color:#fff;padding:20px;text-align:center;">
+                <h1 style="margin:0;font-size:24px;">Booking Confirmed!</h1>
+              </div>
+              <div style="padding:20px;color:#333;">
+                <p>Hi <strong>{user.username}</strong>,</p>
+                <p>Your booking for <strong>{vehicle.model}</strong> has been confirmed.</p>
+                <table width="100%" cellpadding="0" cellspacing="0" 
+                       style="border-collapse:collapse;margin:20px 0;">
+                  <tr>
+                    <td style="padding:8px;border:1px solid #ddd;"><strong>Amount Paid</strong></td>
+                    <td style="padding:8px;border:1px solid #ddd;">रू {int(data['total_amount'])/100:.2f}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px;border:1px solid #ddd;"><strong>Transaction ID</strong></td>
+                    <td style="padding:8px;border:1px solid #ddd;">{transaction_id}</td>
+                  </tr>
+                </table>
+                <p style="text-align:center;">
+                  <a href="http://your-app-url.com/bookings/{vehicle.id}/" 
+                     style="display:inline-block;padding:12px 24px;border-radius:4px;
+                            background:#00ACC1;color:#fff;text-decoration:none;
+                            font-weight:bold;">
+                    View Booking Details
+                  </a>
+                </p>
+                <p>Thank you for choosing <strong>Yatra</strong>! Have a great trip.</p>
+              </div>
+              <div style="background:#f0f0f0;color:#888;padding:12px;text-align:center;
+                          font-size:12px;">
+                © {year} Yatra. All rights reserved.
+              </div>
+            </div>
+          </body>
+        </html>
+        """
+
+        # Send multipart email
+        msg = EmailMultiAlternatives(
+            subject,
+            text_content,
             settings.EMAIL_HOST_USER,
             [user.email],
-            fail_silently=True,
         )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=True)
 
         return Response({
-            "message": f"Payment verified successfully for {rental_days} day(s)!",
-            "transaction_id": transaction_id,
-            "rental_days": rental_days,
-            "rental_period": rental_period_display
+            "message": "Payment verified successfully!",
+            "transaction_id": transaction_id
         })
 
     except Exception as e:
@@ -516,7 +565,7 @@ def khalti_payment_success(request):
                 <div class="emoji">✅</div>
                 <h1>Payment Successful</h1>
                 <p>Your transaction was completed successfully.</p>
-                <a class="button" href="myapp://home">Return to App</a>
+            
             </div>
         </body>
         </html>
@@ -660,14 +709,13 @@ def check_availability(request):
     except Exception:
         return Response({"available": False, "error": "Invalid date format"}, status=400)
 
-    # Check within original availability window
+  
     if req_start < avail_start or req_end > avail_end:
         return Response({
             "available": False,
             "error": "Requested dates outside vehicle's available period"
         }, status=200)
 
-    # Check if vehicle has been marked unavailable (e.g. already booked)
     if hasattr(vehicle, "available") and not vehicle.available:
         return Response({
             "available": False,
