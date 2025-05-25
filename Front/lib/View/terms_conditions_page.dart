@@ -8,7 +8,7 @@ class TermsConditionsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Terms & Conditions',
+          'Terms & Conditionsss',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.cyan,
