@@ -1,4 +1,4 @@
-// lib/helpers/notification_helper.dart
+
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -9,9 +9,9 @@ class NotificationHelper {
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  /// Call this once (e.g. in main or initState) before scheduling or showing notifications.
+
   static Future<void> initialize() async {
-    // Initialize time zone data
+   
     tz_data.initializeTimeZones();
 
     const AndroidInitializationSettings androidInit =
@@ -29,7 +29,7 @@ class NotificationHelper {
 
     await _plugin.initialize(initSettings);
 
-    // For iOS: request permissions
+
     await _plugin
         .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>()

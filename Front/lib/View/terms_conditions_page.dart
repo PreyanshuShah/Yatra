@@ -30,6 +30,7 @@ class TermsConditionsPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               elevation: 8,
+              // ignore: deprecated_member_use
               color: Colors.white.withOpacity(0.95),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),

@@ -50,7 +50,7 @@ class CustomVehicleAdmin(admin.ModelAdmin):
 
     def delete_button(self, obj):
         delete_url = reverse('admin:%s_%s_delete' % (obj._meta.app_label, obj._meta.model_name), args=[obj.pk])
-        return format_html('<a class="button" href="{}" style="color:red;">❌ Delete</a>', delete_url)
+        return format_html('<a class="button" href="{}" style="color:red;"> Delete</a>', delete_url)
     delete_button.short_description = "Delete"
 
     def send_notification_button(self, obj):
@@ -61,7 +61,7 @@ class CustomVehicleAdmin(admin.ModelAdmin):
     def approve_button(self, obj):
         if not obj.is_approved:
             approve_url = reverse('admin:approve_vehicle', args=[obj.pk])
-            return format_html('<a class="button" href="{}" style="color:green;">✅ Approve</a>', approve_url)
+            return format_html('<a class="button" href="{}" style="color:green;">Approve</a>', approve_url)
         return "✔️ Approved"
     approve_button.short_description = "Approve"
 

@@ -123,7 +123,7 @@ class _AddPageState extends State<AddPage> {
       });
 
       var response = await Dio().post(
-        'http://192.168.42.151:8000/auth/add-vehicle/',
+        'http://192.168.43.205:8000/auth/add-vehicle/',
         data: formData,
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
